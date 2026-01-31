@@ -1,0 +1,6 @@
+/dist/
+build
+lib
+connect.ini
+webconnect.ini
+*.log
