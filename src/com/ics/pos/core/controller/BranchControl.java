@@ -5,29 +5,12 @@ import com.ics.bean.BranchBean;
 import database.MySQLConnect;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import util.AppLogUtil;
-import util.MSG;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class BranchControl {
 
     private static BranchBean branchBean = null;
-
-    public static void updateKicItemNo() {
-        /**
-         * * OPEN CONNECTION **
-         */
-        MySQLConnect mysql = new MySQLConnect();
-        try {
-            mysql.open(BranchControl.class);
-            String sql = "update branch set KicItemNo=KicItemNo+1";
-            mysql.getConnection().createStatement().executeUpdate(sql);
-        } catch (SQLException e) {
-            MSG.ERR(null, e.getMessage());
-            AppLogUtil.log(BranchControl.class, "error", e);
-        } finally {
-            mysql.closeConnection(BranchControl.class);
-        }
-    }
 
     public static BranchBean getData() {
         System.out.println("Into Method BranchBean getData()");
@@ -41,7 +24,7 @@ public class BranchControl {
             try (ResultSet rs = mysql.getConnection().createStatement().executeQuery(sql)) {
                 if (rs.next()) {
                     branchBean = new BranchBean();
-                    String bCheck = "";
+                    String bCheck;
                     bCheck = rs.getString("Code");
                     if (bCheck.equals("999")) {
                         branchBean.setCode("sss");
@@ -149,9 +132,8 @@ public class BranchControl {
                 }
             }
 
-        } catch (SQLException e) {
-            MSG.ERR(e.getMessage());
-            AppLogUtil.log(BranchControl.class, "error", e);
+        } catch (SQLException ex) {
+            Logger.getLogger(BranchControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             mysql.closeConnection(BranchControl.class);
         }
@@ -172,23 +154,19 @@ public class BranchControl {
 
     public static String getForm(String kicNo) {
         String form = "1";
-        /**
-         * * OPEN CONNECTION **
-         */
+
         MySQLConnect mysql = new MySQLConnect();
         try {
             mysql.open(BranchControl.class);
             String sql = "select KICCopy" + kicNo + " from branch limit 1";
-            try (//            Statement stmt = mysql.getConnection().createStatement();
-                    ResultSet rs = mysql.getConnection().createStatement().executeQuery(sql)) {
+            try (
+                ResultSet rs = mysql.getConnection().createStatement().executeQuery(sql)) {
                 if (rs.next()) {
                     form = rs.getString(1);
                 }
-//            stmt.close();
             }
-        } catch (SQLException e) {
-            MSG.ERR(e.getMessage());
-            AppLogUtil.log(BranchControl.class, "error", e);
+        } catch (SQLException ex) {
+            Logger.getLogger(BranchControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             mysql.closeConnection(BranchControl.class);
         }

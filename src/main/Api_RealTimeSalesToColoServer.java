@@ -5,6 +5,8 @@ import com.ics.bean.BranchBean;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFrame;
 import util.DateConvert;
 
@@ -20,7 +22,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     // Scheduler สำหรับ run task ทุกๆ 5 นาที
     private ScheduledExecutorService scheduler;
-    private static final int UPLOAD_INTERVAL_MINUTES = 5;
+    private static final int UPLOAD_INTERVAL_MINUTES = 1; // fix 5 for every 5 minutes
 
     public String ErrorText = "Log Error.." + "\r\n";
     public String LogQuery = "Log SQL.." + "\r\n";
@@ -31,11 +33,13 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         System.out.println("Loop For Upload Stcard/Stkfile Update");
         btnUpload.setText(dateConvert.GetCurrentTime());
-        lblBranch.setText("รหัสสาขา : " + branchBean.getCode());
-        btnStatus.setText("Finsished time : " + dateConvert.GetCurrentTime());
+        if (branchBean != null) {
+            lblBranch.setText("รหัสสาขา : " + branchBean.getCode());
+            btnStatus.setText("Finsished time : " + dateConvert.GetCurrentTime());
 
-        // เริ่มต้น ProcessController และ Scheduler
-        initializeAndStartScheduler();
+            // เริ่มต้น ProcessController และ Scheduler
+            initializeAndStartScheduler();
+        }
     }
 
     /**
@@ -58,8 +62,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 btnStatus.setText("Last upload: " + dateConvert.GetCurrentTime());
                 System.out.println("=== Scheduled upload completed ===");
             } catch (Exception e) {
-                util.AppLogUtil.log(this.getClass(), "error", e);
-                System.out.println("Upload error: " + e.getMessage());
+                Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
             }
         };
 
@@ -314,8 +317,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             }
 
             System.out.println("Application shutdown gracefully");
-        } catch (Exception e) {
-            util.AppLogUtil.log(this.getClass(), "error", e);
+        } catch (InterruptedException e) {
+            Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
         } finally {
             System.exit(0);
         }

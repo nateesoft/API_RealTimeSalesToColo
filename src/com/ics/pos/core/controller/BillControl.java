@@ -6,8 +6,9 @@ import database.MySQLConnect;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import util.AppLogUtil;
-import util.MSG;
 
 public class BillControl {
     
@@ -125,7 +126,6 @@ public class BillControl {
                     bean.setB_MemBegin(rs.getDate("B_MemBegin"));
                     bean.setB_MemEnd(rs.getDate("B_MemEnd"));
                 } catch (SQLException e) {
-                    MSG.ERR(null, e.getMessage());
                     AppLogUtil.log(BillControl.class, "error", e);
                 }
 
@@ -135,9 +135,8 @@ public class BillControl {
 
             rs.close();
             stmt.close();
-        } catch (SQLException e) {
-            MSG.ERR(null, e.getMessage());
-            AppLogUtil.log(BillControl.class, "error", e);
+        } catch (SQLException ex) {
+            Logger.getLogger(BillControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             mysql.closeConnection(this.getClass());
         }

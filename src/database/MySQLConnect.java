@@ -1,8 +1,6 @@
 package database;
 
 import com.ics.constants.Value;
-import util.AppLogUtil;
-import util.MSG;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
@@ -63,30 +61,6 @@ public class MySQLConnect {
                     case "charset":
                         CharSet = data[1];
                         break;
-                    case "macno":
-                        Value.MACNO = data[1];
-                        break;
-                    case "language":
-                        Value.LANG = data[1];
-                        break;
-                    case "db_member":
-                        Value.db_member = data[1];
-                        break;
-                    case "useprint":
-                        Value.useprint = Boolean.parseBoolean(data[1]);
-                        break;
-                    case "printkic":
-                        Value.printkic = Boolean.parseBoolean(data[1]);
-                        break;
-                    case "autoqty":
-                        Value.autoqty = Boolean.parseBoolean(data[1]);
-                        break;
-                    case "printdriver":
-                        Value.printdriver = Boolean.parseBoolean(data[1]);
-                        break;
-                    case "printername":
-                        Value.printerDriverName = data[1];
-                        break;
                 }
             }
 
@@ -94,10 +68,8 @@ public class MySQLConnect {
             ds.close();
             fs.close();
 
-        } catch (IOException e) {
-            e.printStackTrace();
-//            MSG.ERR(e.getMessage());
-            AppLogUtil.log(MySQLConnect.class, "error", e);
+        } catch (IOException ex) {
+            Logger.getLogger(MySQLConnect.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -131,9 +103,8 @@ public class MySQLConnect {
             con = DriverManager.getConnection(url, UserName, Password);
             MySQLConstants.MYSQL_CONNECT.put(con.hashCode(), clazz);
 
-        } catch (ClassNotFoundException | SQLException e) {
-            MSG.ERR("Database Connection Error !!!\n" + e.getMessage());
-            AppLogUtil.log(MySQLConnect.class, "error", e);
+        } catch (ClassNotFoundException | SQLException ex) {
+            Logger.getLogger(MySQLConnect.class.getName()).log(Level.SEVERE, null, ex);
             System.exit(0);
         }
     }
@@ -152,7 +123,6 @@ public class MySQLConnect {
                 con = null;
             } catch (SQLException ex) {
                 Logger.getLogger(MySQLConnect.class.getName()).log(Level.SEVERE, null, ex);
-                AppLogUtil.log(MySQLConnect.class, "error", ex);
             }
         }
     }
