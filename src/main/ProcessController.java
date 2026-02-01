@@ -701,9 +701,9 @@ public class ProcessController {
                 + "WHERE s_pcode=? AND s_date=? AND s_entrytime=? AND s_rem=? AND s_user=? AND s_send='N' "
                 + "AND s_no=? AND s_incost=? AND s_in=? AND s_out=? AND s_outcost=? AND s_que=?";
 
-        try (PreparedStatement pstmtInsert = mysqlWebOnline.getConnection().prepareStatement(sqlInsertStcard); 
-                PreparedStatement pstmtUpdateShort = mysqlLocal.getConnection().prepareStatement(sqlUpdateLocalShort); 
-                PreparedStatement pstmtUpdateFull = mysqlLocal.getConnection().prepareStatement(sqlUpdateLocalFull)) {
+        try (PreparedStatement pstmtInsertServer = mysqlWebOnline.getConnection().prepareStatement(sqlInsertStcard); 
+                PreparedStatement pstmtLocalUpdateShort = mysqlLocal.getConnection().prepareStatement(sqlUpdateLocalShort); 
+                PreparedStatement pstmtLocalUpdateFull = mysqlLocal.getConnection().prepareStatement(sqlUpdateLocalFull)) {
 
             int size = listSTCardNotSend.size() - 1;
             if (!listSTCardNotSend.isEmpty()) {
@@ -720,33 +720,40 @@ public class ProcessController {
 
                     STCardBean stCardNotSend = (STCardBean) listSTCardNotSend.get(i);
                     STCardBean stcardBean;
+                    
+                    String checkFirstDigitSNo = stCardNotSend.getS_No().substring(0, 1);
+                    
                     if (stCardNotSend.getS_Rem().equals("SAL")) {
-                        String strCheck = stCardNotSend.getS_No().substring(0, 1);
-                        if (strCheck.equals("E")) {
-                            discount = 0;
-                            nettotal = stCardNotSend.getS_OutCost();
-                            refund = "-";
-                            refno = stCardNotSend.getS_No();
-                            cashier = stCardNotSend.getEmp();
-                            emp = cashier;
-                        }
-                        if (strCheck.equals("R")) {
-                            stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode());
-                            discount = (stcardBean.getDiscount());
-                            nettotal = (stcardBean.getNettotal());
-                            refund = stcardBean.getRefund();
-                            refno = stcardBean.getRefNo();
-                            cashier = stcardBean.getCashier();
-                            emp = stcardBean.getEmp();
-                        }
-                        if (strCheck.equals("0")) {
-                            stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode());
-                            discount = stcardBean.getDiscount();
-                            nettotal = stcardBean.getNettotal();
-                            refund = stcardBean.getRefund();
-                            refno = stcardBean.getRefNo();
-                            cashier = stcardBean.getCashier();
-                            emp = stcardBean.getEmp();
+                        
+                        switch (checkFirstDigitSNo) {
+                            case "E":
+                                discount = 0;
+                                nettotal = stCardNotSend.getS_OutCost();
+                                refund = "-";
+                                refno = stCardNotSend.getS_No();
+                                cashier = stCardNotSend.getEmp();
+                                emp = cashier;
+                                break;
+                            case "R":
+                                stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode(), checkFirstDigitSNo);
+                                discount = (stcardBean.getDiscount());
+                                nettotal = (stcardBean.getNettotal());
+                                refund = stcardBean.getRefund();
+                                refno = stcardBean.getRefNo();
+                                cashier = stcardBean.getCashier();
+                                emp = stcardBean.getEmp();
+                                break;
+                            case "0":
+                                stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode(), checkFirstDigitSNo);
+                                discount = stcardBean.getDiscount();
+                                nettotal = stcardBean.getNettotal();
+                                refund = stcardBean.getRefund();
+                                refno = stcardBean.getRefNo();
+                                cashier = stcardBean.getCashier();
+                                emp = stcardBean.getEmp();
+                                break;
+                            default:
+                                break;
                         }
                     } else {
                         discount = 0;
@@ -761,53 +768,51 @@ public class ProcessController {
                         emp = cashier;
                     }
 
-                    String s_noCheck = stCardNotSend.getS_No().substring(0, 1);
-                    if ((s_noCheck.equals("E") && stCardNotSend.getS_Rem().equals("SAL")) 
-                            || (refno.equals("") && stCardNotSend.getS_Rem().equals("SAL"))) {
-
-                        int updateStatusFromServer = 0;
+                    if (stCardNotSend.getS_Rem().equals("SAL") && checkFirstDigitSNo.equals("E") || refno.equals("")) {
                         try {
                             if (nettotal == 0 && stCardNotSend.getS_Rem().equals("SAL") 
                                     && stCardNotSend.getS_Out() != 0) {
                                 stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
                                 nettotal = stCardNotSend.getNettotal();
                             }
-                            if (!stCardNotSend.getRefNo().equals("")) {
-                                pstmtInsert.setString(1, stCardNotSend.getS_Date());
-                                pstmtInsert.setString(2, stCardNotSend.getS_No());
-                                pstmtInsert.setString(3, stCardNotSend.getS_SubNo());
-                                pstmtInsert.setString(4, String.valueOf(stCardNotSend.getS_Que()));
-                                pstmtInsert.setString(5, stCardNotSend.getS_PCode());
-                                pstmtInsert.setString(6, stCardNotSend.getS_Stk());
-                                pstmtInsert.setString(7, String.valueOf(stCardNotSend.getS_In()));
-                                pstmtInsert.setString(8, String.valueOf(stCardNotSend.getS_Out()));
-                                pstmtInsert.setString(9, String.valueOf(stCardNotSend.getS_InCost()));
-                                pstmtInsert.setString(10, String.valueOf(stCardNotSend.getS_OutCost()));
-                                pstmtInsert.setString(11, String.valueOf(stCardNotSend.getS_ACost()));
-                                pstmtInsert.setString(12, stCardNotSend.getS_Rem());
-                                pstmtInsert.setString(13, stCardNotSend.getS_User());
-                                pstmtInsert.setString(14, stCardNotSend.getS_EntryDate());
-                                pstmtInsert.setString(15, stCardNotSend.getS_EntryTime());
-                                pstmtInsert.setString(16, stCardNotSend.getS_Link());
-                                pstmtInsert.setString(17, branchCode);
-                                pstmtInsert.setString(18, String.valueOf(discount));
-                                pstmtInsert.setString(19, String.valueOf(nettotal));
-                                pstmtInsert.setString(20, refund);
-                                pstmtInsert.setString(21, refno);
-                                pstmtInsert.setString(22, cashier);
-                                pstmtInsert.setString(23, emp);
-                                updateStatusFromServer = pstmtInsert.executeUpdate();
-
+                            
+                            if (!refno.equals("")) {
+                                pstmtInsertServer.setString(1, stCardNotSend.getS_Date());
+                                pstmtInsertServer.setString(2, stCardNotSend.getS_No());
+                                pstmtInsertServer.setString(3, stCardNotSend.getS_SubNo());
+                                pstmtInsertServer.setString(4, String.valueOf(stCardNotSend.getS_Que()));
+                                pstmtInsertServer.setString(5, stCardNotSend.getS_PCode());
+                                pstmtInsertServer.setString(6, stCardNotSend.getS_Stk());
+                                pstmtInsertServer.setString(7, String.valueOf(stCardNotSend.getS_In()));
+                                pstmtInsertServer.setString(8, String.valueOf(stCardNotSend.getS_Out()));
+                                pstmtInsertServer.setString(9, String.valueOf(stCardNotSend.getS_InCost()));
+                                pstmtInsertServer.setString(10, String.valueOf(stCardNotSend.getS_OutCost()));
+                                pstmtInsertServer.setString(11, String.valueOf(stCardNotSend.getS_ACost()));
+                                pstmtInsertServer.setString(12, stCardNotSend.getS_Rem());
+                                pstmtInsertServer.setString(13, stCardNotSend.getS_User());
+                                pstmtInsertServer.setString(14, stCardNotSend.getS_EntryDate());
+                                pstmtInsertServer.setString(15, stCardNotSend.getS_EntryTime());
+                                pstmtInsertServer.setString(16, stCardNotSend.getS_Link());
+                                pstmtInsertServer.setString(17, branchCode);
+                                pstmtInsertServer.setString(18, String.valueOf(discount));
+                                pstmtInsertServer.setString(19, String.valueOf(nettotal));
+                                pstmtInsertServer.setString(20, refund);
+                                pstmtInsertServer.setString(21, refno);
+                                pstmtInsertServer.setString(22, cashier);
+                                pstmtInsertServer.setString(23, emp);
+                                
+                                int updateStatusFromServer = pstmtInsertServer.executeUpdate();
                                 if (updateStatusFromServer > 0) {
-                                    pstmtUpdateShort.setString(1, dateConvert.GetCurrentDate());
-                                    pstmtUpdateShort.setString(2, dateConvert.GetCurrentTime());
-                                    pstmtUpdateShort.setString(3, stCardNotSend.getS_PCode());
-                                    pstmtUpdateShort.setString(4, stCardNotSend.getS_Date());
-                                    pstmtUpdateShort.setString(5, stCardNotSend.getS_EntryTime());
-                                    pstmtUpdateShort.setString(6, stCardNotSend.getS_Rem());
-                                    pstmtUpdateShort.setString(7, stCardNotSend.getS_User());
-                                    pstmtUpdateShort.setString(8, stCardNotSend.getS_No());
-                                    pstmtUpdateShort.executeUpdate();
+                                    pstmtLocalUpdateShort.setString(1, dateConvert.GetCurrentDate());
+                                    pstmtLocalUpdateShort.setString(2, dateConvert.GetCurrentTime());
+                                    pstmtLocalUpdateShort.setString(3, stCardNotSend.getS_PCode());
+                                    pstmtLocalUpdateShort.setString(4, stCardNotSend.getS_Date());
+                                    pstmtLocalUpdateShort.setString(5, stCardNotSend.getS_EntryTime());
+                                    pstmtLocalUpdateShort.setString(6, stCardNotSend.getS_Rem());
+                                    pstmtLocalUpdateShort.setString(7, stCardNotSend.getS_User());
+                                    pstmtLocalUpdateShort.setString(8, stCardNotSend.getS_No());
+                                    
+                                    pstmtLocalUpdateShort.executeUpdate();
                                     tempText += "Inserted stcard: " + stCardNotSend.getS_No() + "\n";
                                     txtSql.setText(tempText + logTab);
                                 }
@@ -825,30 +830,31 @@ public class ProcessController {
                                 nettotal = stCardNotSend.getNettotal();
                             }
 
-                            pstmtInsert.setString(1, stCardNotSend.getS_Date());
-                            pstmtInsert.setString(2, stCardNotSend.getS_No());
-                            pstmtInsert.setString(3, stCardNotSend.getS_SubNo());
-                            pstmtInsert.setString(4, String.valueOf(stCardNotSend.getS_Que()));
-                            pstmtInsert.setString(5, stCardNotSend.getS_PCode());
-                            pstmtInsert.setString(6, stCardNotSend.getS_Stk());
-                            pstmtInsert.setString(7, String.valueOf(stCardNotSend.getS_In()));
-                            pstmtInsert.setString(8, String.valueOf(stCardNotSend.getS_Out()));
-                            pstmtInsert.setString(9, String.valueOf(stCardNotSend.getS_InCost()));
-                            pstmtInsert.setString(10, String.valueOf(stCardNotSend.getS_OutCost()));
-                            pstmtInsert.setString(11, String.valueOf(stCardNotSend.getS_ACost()));
-                            pstmtInsert.setString(12, stCardNotSend.getS_Rem());
-                            pstmtInsert.setString(13, stCardNotSend.getS_User());
-                            pstmtInsert.setString(14, stCardNotSend.getS_EntryDate());
-                            pstmtInsert.setString(15, stCardNotSend.getS_EntryTime());
-                            pstmtInsert.setString(16, stCardNotSend.getS_Link());
-                            pstmtInsert.setString(17, branchCode);
-                            pstmtInsert.setString(18, String.valueOf(discount));
-                            pstmtInsert.setString(19, String.valueOf(nettotal));
-                            pstmtInsert.setString(20, refund);
-                            pstmtInsert.setString(21, refno);
-                            pstmtInsert.setString(22, cashier);
-                            pstmtInsert.setString(23, emp);
-                            updateStatusFromServer = pstmtInsert.executeUpdate();
+                            pstmtInsertServer.setString(1, stCardNotSend.getS_Date());
+                            pstmtInsertServer.setString(2, stCardNotSend.getS_No());
+                            pstmtInsertServer.setString(3, stCardNotSend.getS_SubNo());
+                            pstmtInsertServer.setString(4, String.valueOf(stCardNotSend.getS_Que()));
+                            pstmtInsertServer.setString(5, stCardNotSend.getS_PCode());
+                            pstmtInsertServer.setString(6, stCardNotSend.getS_Stk());
+                            pstmtInsertServer.setString(7, String.valueOf(stCardNotSend.getS_In()));
+                            pstmtInsertServer.setString(8, String.valueOf(stCardNotSend.getS_Out()));
+                            pstmtInsertServer.setString(9, String.valueOf(stCardNotSend.getS_InCost()));
+                            pstmtInsertServer.setString(10, String.valueOf(stCardNotSend.getS_OutCost()));
+                            pstmtInsertServer.setString(11, String.valueOf(stCardNotSend.getS_ACost()));
+                            pstmtInsertServer.setString(12, stCardNotSend.getS_Rem());
+                            pstmtInsertServer.setString(13, stCardNotSend.getS_User());
+                            pstmtInsertServer.setString(14, stCardNotSend.getS_EntryDate());
+                            pstmtInsertServer.setString(15, stCardNotSend.getS_EntryTime());
+                            pstmtInsertServer.setString(16, stCardNotSend.getS_Link());
+                            pstmtInsertServer.setString(17, branchCode);
+                            pstmtInsertServer.setString(18, String.valueOf(discount));
+                            pstmtInsertServer.setString(19, String.valueOf(nettotal));
+                            pstmtInsertServer.setString(20, refund);
+                            pstmtInsertServer.setString(21, refno);
+                            pstmtInsertServer.setString(22, cashier);
+                            pstmtInsertServer.setString(23, emp);
+                            
+                            updateStatusFromServer = pstmtInsertServer.executeUpdate();
 
                             tempText += "Inserted stcard: " + stCardNotSend.getS_No() + "\n";
                             txtSql.setText(tempText + logTab);
@@ -857,22 +863,24 @@ public class ProcessController {
                         }
 
                         if (updateStatusFromServer > 0) {
-                            pstmtUpdateFull.setString(1, dateConvert.GetCurrentDate());
-                            pstmtUpdateFull.setString(2, dateConvert.GetCurrentTime());
-                            pstmtUpdateFull.setString(3, stCardNotSend.getS_PCode());
-                            pstmtUpdateFull.setString(4, stCardNotSend.getS_Date());
-                            pstmtUpdateFull.setString(5, stCardNotSend.getS_EntryTime());
-                            pstmtUpdateFull.setString(6, stCardNotSend.getS_Rem());
-                            pstmtUpdateFull.setString(7, stCardNotSend.getS_User());
-                            pstmtUpdateFull.setString(8, stCardNotSend.getS_No());
-                            pstmtUpdateFull.setString(9, String.valueOf(stCardNotSend.getS_InCost()));
-                            pstmtUpdateFull.setString(10, String.valueOf(stCardNotSend.getS_In()));
-                            pstmtUpdateFull.setString(11, String.valueOf(stCardNotSend.getS_Out()));
-                            pstmtUpdateFull.setString(12, String.valueOf(stCardNotSend.getS_OutCost()));
-                            pstmtUpdateFull.setString(13, String.valueOf(stCardNotSend.getS_Que()));
-                            pstmtUpdateFull.executeUpdate();
+                            pstmtLocalUpdateFull.setString(1, dateConvert.GetCurrentDate());
+                            pstmtLocalUpdateFull.setString(2, dateConvert.GetCurrentTime());
+                            pstmtLocalUpdateFull.setString(3, stCardNotSend.getS_PCode());
+                            pstmtLocalUpdateFull.setString(4, stCardNotSend.getS_Date());
+                            pstmtLocalUpdateFull.setString(5, stCardNotSend.getS_EntryTime());
+                            pstmtLocalUpdateFull.setString(6, stCardNotSend.getS_Rem());
+                            pstmtLocalUpdateFull.setString(7, stCardNotSend.getS_User());
+                            pstmtLocalUpdateFull.setString(8, stCardNotSend.getS_No());
+                            pstmtLocalUpdateFull.setString(9, String.valueOf(stCardNotSend.getS_InCost()));
+                            pstmtLocalUpdateFull.setString(10, String.valueOf(stCardNotSend.getS_In()));
+                            pstmtLocalUpdateFull.setString(11, String.valueOf(stCardNotSend.getS_Out()));
+                            pstmtLocalUpdateFull.setString(12, String.valueOf(stCardNotSend.getS_OutCost()));
+                            pstmtLocalUpdateFull.setString(13, String.valueOf(stCardNotSend.getS_Que()));
+                            pstmtLocalUpdateFull.executeUpdate();
 
                             String pcode = stCardNotSend.getS_PCode();
+                            
+                            // send to upload stfkFile
                             uploadStkfile(pcode, branchCode);
                         }
                     }
@@ -1121,7 +1129,10 @@ public class ProcessController {
                         + "lastupdate=?, lastTimeUpdate=? WHERE bpcode=? AND branch=?";
                 String sqlUpdLocal = "UPDATE stkfile SET Lastupdate=?, LastTimeUpdate=? WHERE bpcode=?";
 
-                try (PreparedStatement pstmtCheck = mysqlWebOnline.getConnection().prepareStatement(sqlCheckServer); PreparedStatement pstmtIns = mysqlWebOnline.getConnection().prepareStatement(sqlInsServer); PreparedStatement pstmtUpd = mysqlWebOnline.getConnection().prepareStatement(sqlUpdServer); PreparedStatement pstmtUpdLocal = mysqlLocal.getConnection().prepareStatement(sqlUpdLocal)) {
+                try (PreparedStatement pstmtCheck = mysqlWebOnline.getConnection().prepareStatement(sqlCheckServer); 
+                        PreparedStatement pstmtIns = mysqlWebOnline.getConnection().prepareStatement(sqlInsServer); 
+                        PreparedStatement pstmtUpd = mysqlWebOnline.getConnection().prepareStatement(sqlUpdServer); 
+                        PreparedStatement pstmtUpdLocal = mysqlLocal.getConnection().prepareStatement(sqlUpdLocal)) {
 
                     for (int i = 0; i < listStkFile.size(); i++) {
                         loadStatus();
@@ -1193,15 +1204,13 @@ public class ProcessController {
         }
     }
 
-    public STCardBean matchDiscount(String s_No, String s_Date, String s_PCode) {
+    public STCardBean matchDiscount(String s_No, String s_Date, String s_PCode, String checkFirstDigitSNo) {
         STCardBean bean = new STCardBean();
-        String indexNoCheck = s_No.substring(0, 1);
-
         try {
             if (s_Date.equals(dateConvert.GetCurrentDate())) {
-                bean = processCurrentDate(s_No, indexNoCheck, s_PCode, s_Date);
+                bean = processCurrentDate(s_No, checkFirstDigitSNo, s_PCode, s_Date);
             } else {
-                bean = processNotCurrentDate(s_No, indexNoCheck, s_PCode, s_Date);
+                bean = processNotCurrentDate(s_No, checkFirstDigitSNo, s_PCode, s_Date);
             }
         } catch (SQLException e) {
             Logger.getLogger(ProcessController.class.getName()).log(Level.SEVERE, null, e);
@@ -1209,7 +1218,7 @@ public class ProcessController {
         return bean;
     }
 
-    private STCardBean processNotCurrentDate(String s_No, String indexNoCheck, String s_PCode, String s_Date) throws SQLException {
+    private STCardBean processNotCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode, String s_Date) throws SQLException {
         STCardBean bean = new STCardBean();
         String r_time;
         String refno;
@@ -1220,7 +1229,7 @@ public class ProcessController {
         r_time = extractRTime(s_No, strs);
 
         //ถ้าเป็นเอกสาร คืนสินค้า
-        if (indexNoCheck.equals("R")) {
+        if (checkFirstDigitSNo.equals("R")) {
             macno = s_No.substring(2, 5);
         }
 
@@ -1242,7 +1251,7 @@ public class ProcessController {
                     }
                     bean.setNettotal(rs.getDouble("R_Nettotal"));
                     bean.setRefund(rs.getString("R_Refund"));
-                    if (indexNoCheck.equals("R")) {
+                    if (checkFirstDigitSNo.equals("R")) {
                         bean.setRefNo(s_No);
                         bean.setNettotal(rs.getDouble("R_Nettotal") * rs.getDouble("r_quan") * -1);
                         bean.setDiscount(bean.getDiscount() * rs.getDouble("r_quan") * -1);
@@ -1250,18 +1259,18 @@ public class ProcessController {
                         bean.setRefNo(rs.getString("R_Refno"));
                     }
 
-                    bean.setCashier("Cashier");
+                    bean.setCashier(rs.getString("Cashier"));
                     bean.setEmp(rs.getString("R_Emp"));
                     if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
                         bean.setNettotal(0);
                     }
                     bean.setR_time(rs.getString("r_time"));
                 } else {
-                    if (indexNoCheck.equals("R")) {
+                    if (checkFirstDigitSNo.equals("R")) {
                         String[] strs1 = s_No.split("/");
                         refno = strs1[1];
 
-                        if (indexNoCheck.equals("R")) {
+                        if (checkFirstDigitSNo.equals("R")) {
                             String querySTran = "SELECT r_refno, r_total, r_nettotal, r_pramt, r_discbath, "
                                     + "r_refno, r_refund, cashier Cashier, r_emp R_Emp, r_time "
                                     + "FROM s_tran "
@@ -1281,7 +1290,7 @@ public class ProcessController {
                                         }
 
                                         bean.setRefund(rsNew.getString("R_Refund"));
-                                        if (indexNoCheck.equals("R")) {
+                                        if (checkFirstDigitSNo.equals("R")) {
                                             bean.setRefNo(s_No);
                                         } else {
                                             bean.setRefNo(rsNew.getString("R_Refno"));
@@ -1319,7 +1328,7 @@ public class ProcessController {
 
                         String r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
                         bean.setR_time(r_newTime);
-                        if (indexNoCheck.equals("R")) {
+                        if (checkFirstDigitSNo.equals("R")) {
                             macno = s_No.substring(2, 5);
                         }
                         String querySTran = "SELECT r_refno, r_total, r_nettotal, r_pramt, r_discbath, "
@@ -1340,7 +1349,7 @@ public class ProcessController {
                                     }
                                     bean.setNettotal(rsNew.getDouble("R_Nettotal"));
                                     bean.setRefund(rsNew.getString("R_Refund"));
-                                    if (indexNoCheck.equals("R")) {
+                                    if (checkFirstDigitSNo.equals("R")) {
                                         bean.setRefNo(s_No);
                                     } else {
                                         bean.setRefNo(rsNew.getString("R_Refno"));
@@ -1364,16 +1373,13 @@ public class ProcessController {
         return bean;
     }
 
-    private STCardBean processCurrentDate(String s_No, String indexNoCheck, String s_PCode, String s_Date) throws SQLException {
+    private STCardBean processCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode, String s_Date) throws SQLException {
         STCardBean bean = new STCardBean();
         String macno;
         String refno = "";
 
-        //ถ้าข้อมูลเป็นวันปัจจุบัน
-        indexNoCheck = s_No.substring(0, 1);
-
         //ถ้าเป็นว่ายกเลิกบิล
-        if (indexNoCheck.equals("R")) {
+        if (checkFirstDigitSNo.equals("R")) {
             macno = s_No.substring(2, 5);
             String[] strs1 = s_No.split("/");
             refno = strs1[1];
@@ -1442,7 +1448,7 @@ public class ProcessController {
                         int ss = 0;
                         String r_newTime;
                         String sqlInner;
-                        if (!indexNoCheck.equals("R")) {
+                        if (!checkFirstDigitSNo.equals("R")) {
                             hh = Integer.parseInt(r_time.substring(0, 2));
                             mm = Integer.parseInt(r_time.substring(3, 5));
                             ss = Integer.parseInt(r_time.substring(6, 8));

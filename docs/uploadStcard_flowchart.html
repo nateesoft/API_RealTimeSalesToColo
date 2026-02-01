@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flowchart: uploadStcard Method</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+        }
+        .flowchart {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .node {
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin: 10px auto;
+            text-align: center;
+            max-width: 400px;
+            position: relative;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .start-end {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 30px;
+        }
+        .process {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: #000;
+        }
+        .decision {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transform: rotate(0deg);
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            padding: 40px 20px;
+            max-width: 300px;
+            color: #000;
+            font-weight: bold;
+        }
+        .decision-box {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            border: 3px solid #fff;
+            color: #000;
+            font-weight: bold;
+        }
+        .data {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            clip-path: polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%);
+            color: #000;
+        }
+        .arrow {
+            text-align: center;
+            font-size: 24px;
+            color: #00d4ff;
+            margin: 5px 0;
+        }
+        .arrow-text {
+            font-size: 12px;
+            color: #ffd700;
+            font-weight: bold;
+        }
+        .branch {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+        }
+        .branch-item {
+            flex: 1;
+            max-width: 350px;
+        }
+        .branch-label {
+            text-align: center;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .yes { background: #4ade80; color: #000; }
+        .no { background: #f87171; color: #000; }
+        .section {
+            border: 2px dashed #4a5568;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .section-title {
+            background: #2d3748;
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .code {
+            background: #1e1e1e;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            color: #9cdcfe;
+            margin-top: 5px;
+        }
+        .highlight-e { border: 3px solid #3b82f6; }
+        .highlight-r { border: 3px solid #8b5cf6; }
+        .highlight-0 { border: 3px solid #ec4899; }
+        .highlight-other { border: 3px solid #6b7280; }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .legend-box {
+            width: 30px;
+            height: 20px;
+            border-radius: 5px;
+        }
+        .sub-branch {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .sub-branch-item {
+            flex: 1;
+            min-width: 200px;
+            max-width: 280px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+        .small-node {
+            padding: 10px 15px;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        th, td {
+            border: 1px solid #4a5568;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #2d3748;
+        }
+        .connector {
+            width: 2px;
+            height: 30px;
+            background: #00d4ff;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Flowchart: uploadStcard Method</h1>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-box" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+            <span>Start/End</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);"></div>
+            <span>Process</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div>
+            <span>Decision</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-box" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);"></div>
+            <span>Data/IO</span>
+        </div>
+    </div>
+
+    <div class="flowchart">
+        <!-- START -->
+        <div class="node start-end">▶ START: uploadStcard(branchCode)</div>
+        <div class="arrow">↓</div>
+
+        <!-- Section 1: Query Data -->
+        <div class="section">
+            <div class="section-title">📥 STEP 1: Query ข้อมูลที่ยังไม่ได้ส่ง</div>
+
+            <div class="node process">
+                ensureConnectionsOpen()<br>
+                <small>ตรวจสอบ connection</small>
+            </div>
+            <div class="arrow">↓</div>
+
+            <div class="node data">
+                SELECT * FROM stcard<br>
+                WHERE s_send ≠ 'Y' AND Source_Data ≠ 'WEB'
+                <div class="code">ดึงข้อมูล stcard ที่ยังไม่ได้ส่งและไม่ใช่ข้อมูลจาก WEB</div>
+            </div>
+            <div class="arrow">↓</div>
+
+            <div class="node process">
+                สร้าง List&lt;STCardBean&gt; listSTCardNotSend<br>
+                <small>เก็บข้อมูลทั้งหมดที่ query ได้</small>
+            </div>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <!-- Section 2: Loop -->
+        <div class="section">
+            <div class="section-title">🔄 STEP 2: วนลูปประมวลผลแต่ละ Record</div>
+
+            <div class="node decision-box">
+                listSTCardNotSend.isEmpty()?
+            </div>
+
+            <div class="branch">
+                <div class="branch-item">
+                    <div class="branch-label yes">YES (ว่าง)</div>
+                    <div class="arrow">↓</div>
+                    <div class="node process small-node">ข้ามไป END</div>
+                </div>
+                <div class="branch-item">
+                    <div class="branch-label no">NO (มีข้อมูล)</div>
+                    <div class="arrow">↓</div>
+                    <div class="node process small-node">
+                        FOR each record in list<br>
+                        <small>วนลูปทีละ record</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <!-- Section 3: Check s_rem -->
+        <div class="section">
+            <div class="section-title">🔍 STEP 3: ตรวจสอบประเภท (s_rem)</div>
+
+            <div class="node decision-box">
+                s_rem == "SAL"?<br>
+                <small>(เป็นการขายหรือไม่)</small>
+            </div>
+
+            <div class="branch">
+                <div class="branch-item">
+                    <div class="branch-label yes">YES (SAL = ขาย)</div>
+                    <div class="arrow">↓</div>
+
+                    <!-- Sub-decision for first digit -->
+                    <div class="node decision-box small-node">
+                        ตรวจสอบตัวอักษรแรกของ s_no
+                    </div>
+
+                    <div class="sub-branch">
+                        <div class="sub-branch-item highlight-e">
+                            <div class="branch-label" style="background: #3b82f6;">"E" (Employee)</div>
+                            <table>
+                                <tr><th>Field</th><th>Value</th></tr>
+                                <tr><td>discount</td><td>0</td></tr>
+                                <tr><td>nettotal</td><td>s_outcost</td></tr>
+                                <tr><td>refund</td><td>"-"</td></tr>
+                                <tr><td>refno</td><td>s_no</td></tr>
+                                <tr><td>cashier</td><td>emp</td></tr>
+                            </table>
+                        </div>
+
+                        <div class="sub-branch-item highlight-r">
+                            <div class="branch-label" style="background: #8b5cf6;">"R" (Return)</div>
+                            <div class="node process small-node">
+                                เรียก matchDiscount()<br>
+                                <small>ดึงข้อมูลส่วนลดจาก s_tran</small>
+                            </div>
+                        </div>
+
+                        <div class="sub-branch-item highlight-0">
+                            <div class="branch-label" style="background: #ec4899;">"0" (Normal)</div>
+                            <div class="node process small-node">
+                                เรียก matchDiscount()<br>
+                                <small>ดึงข้อมูลส่วนลดจาก s_tran</small>
+                            </div>
+                        </div>
+
+                        <div class="sub-branch-item highlight-other">
+                            <div class="branch-label" style="background: #6b7280;">อื่นๆ</div>
+                            <div class="node process small-node" style="background: #fee2e2; color: #000;">
+                                ⚠️ ไม่มี else<br>
+                                ค่าเป็น default<br>
+                                <small>refno = "" (ว่าง)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="branch-item">
+                    <div class="branch-label no">NO (ไม่ใช่ SAL)</div>
+                    <div class="arrow">↓</div>
+                    <table>
+                        <tr><th>Field</th><th>Value</th></tr>
+                        <tr><td>discount</td><td>0</td></tr>
+                        <tr><td>nettotal</td><td>s_incost หรือ s_outcost</td></tr>
+                        <tr><td>refund</td><td>"-"</td></tr>
+                        <tr><td>refno</td><td>"" (ว่าง)</td></tr>
+                        <tr><td>cashier</td><td>จาก bean</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <!-- Section 4: Branch Decision -->
+        <div class="section">
+            <div class="section-title">⚡ STEP 4: แยก Branch การ Insert</div>
+
+            <div class="node decision-box">
+                (s_no ขึ้นต้นด้วย "E" && s_rem == "SAL")<br>
+                OR<br>
+                (refno == "" && s_rem == "SAL")?
+            </div>
+
+            <div class="branch">
+                <!-- Branch 1 -->
+                <div class="branch-item" style="border: 2px solid #f59e0b; border-radius: 15px; padding: 15px;">
+                    <div class="branch-label" style="background: #f59e0b; color: #000;">🅰️ Branch 1: E หรือ refno ว่าง</div>
+                    <div class="arrow">↓</div>
+
+                    <div class="node decision-box small-node">
+                        refno ≠ "" ?
+                    </div>
+
+                    <div class="branch">
+                        <div style="flex:1">
+                            <div class="branch-label yes" style="font-size:11px">YES</div>
+                            <div class="node process small-node">
+                                INSERT → Server<br>
+                                <small>mysqlWebOnline</small>
+                            </div>
+                            <div class="arrow">↓</div>
+                            <div class="node process small-node">
+                                UPDATE Local<br>
+                                <small>pstmtUpdateShort</small><br>
+                                <small>SET s_send='Y'</small>
+                            </div>
+                        </div>
+                        <div style="flex:1">
+                            <div class="branch-label no" style="font-size:11px">NO</div>
+                            <div class="node process small-node" style="background: #fca5a5; color: #000;">
+                                ❌ ไม่ทำอะไร<br>
+                                <small>record ถูกข้าม</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 15px; padding: 10px; background: rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                        <strong>📌 Note:</strong> ไม่เรียก uploadStkfile()
+                    </div>
+                </div>
+
+                <!-- Branch 2 -->
+                <div class="branch-item" style="border: 2px solid #10b981; border-radius: 15px; padding: 15px;">
+                    <div class="branch-label" style="background: #10b981; color: #000;">🅱️ Branch 2: R, 0 ที่มี refno</div>
+                    <div class="arrow">↓</div>
+
+                    <div class="node process small-node">
+                        INSERT → Server<br>
+                        <small>mysqlWebOnline</small>
+                    </div>
+                    <div class="arrow">↓</div>
+
+                    <div class="node decision-box small-node">
+                        Insert สำเร็จ?
+                    </div>
+
+                    <div class="branch">
+                        <div style="flex:1">
+                            <div class="branch-label yes" style="font-size:11px">YES</div>
+                            <div class="node process small-node">
+                                UPDATE Local<br>
+                                <small>pstmtUpdateFull</small><br>
+                                <small>SET s_send='Y'</small>
+                            </div>
+                            <div class="arrow">↓</div>
+                            <div class="node process small-node" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff;">
+                                📦 uploadStkfile()<br>
+                                <small>อัพเดท stock</small>
+                            </div>
+                        </div>
+                        <div style="flex:1">
+                            <div class="branch-label no" style="font-size:11px">NO</div>
+                            <div class="node process small-node" style="background: #fca5a5; color: #000;">
+                                ❌ ไม่ update local
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="arrow">↓</div>
+
+        <!-- Section 5: End Loop -->
+        <div class="section">
+            <div class="section-title">🔚 STEP 5: จบการทำงาน</div>
+
+            <div class="node process">
+                วนลูป record ถัดไป<br>
+                <small>จนกว่าจะครบทุก record</small>
+            </div>
+            <div class="arrow">↓</div>
+
+            <div class="node process">
+                lblDisplayStcard.setBackground(Color.green)<br>
+                btnStatus.setEnabled(true)
+            </div>
+        </div>
+
+        <div class="arrow">↓</div>
+        <div class="node start-end">⏹ END</div>
+
+        <!-- Summary Table -->
+        <div class="section" style="margin-top: 40px;">
+            <div class="section-title">📋 สรุป Logic ตาม s_no</div>
+
+            <table style="background: rgba(255,255,255,0.1);">
+                <tr>
+                    <th>s_no ขึ้นต้น</th>
+                    <th>s_rem</th>
+                    <th>Branch</th>
+                    <th>จะ Insert?</th>
+                    <th>เรียก uploadStkfile?</th>
+                </tr>
+                <tr style="background: rgba(59, 130, 246, 0.3);">
+                    <td><strong>"E"</strong> (Employee)</td>
+                    <td>SAL</td>
+                    <td>Branch 1</td>
+                    <td>✅ ใช่ (refno = s_no)</td>
+                    <td>❌ ไม่</td>
+                </tr>
+                <tr style="background: rgba(139, 92, 246, 0.3);">
+                    <td><strong>"R"</strong> (Return)</td>
+                    <td>SAL</td>
+                    <td>Branch 2</td>
+                    <td>✅ ใช่ (ถ้า matchDiscount คืน refno)</td>
+                    <td>✅ ใช่</td>
+                </tr>
+                <tr style="background: rgba(236, 72, 153, 0.3);">
+                    <td><strong>"0"</strong> (Normal)</td>
+                    <td>SAL</td>
+                    <td>Branch 2</td>
+                    <td>✅ ใช่ (ถ้า matchDiscount คืน refno)</td>
+                    <td>✅ ใช่</td>
+                </tr>
+                <tr style="background: rgba(107, 114, 128, 0.3);">
+                    <td><strong>อื่นๆ</strong></td>
+                    <td>SAL</td>
+                    <td>Branch 1</td>
+                    <td>❌ ไม่ (refno ว่าง)</td>
+                    <td>❌ ไม่</td>
+                </tr>
+                <tr style="background: rgba(255, 255, 255, 0.1);">
+                    <td>ทุกตัว</td>
+                    <td>ไม่ใช่ SAL</td>
+                    <td>Branch 2</td>
+                    <td>✅ ใช่</td>
+                    <td>✅ ใช่</td>
+                </tr>
+            </table>
+        </div>
+
+    </div>
+</body>
+</html>
