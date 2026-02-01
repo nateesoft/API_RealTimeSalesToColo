@@ -17,7 +17,7 @@ import util.DateConvert;
 public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private ProcessController processController = null;
-    private final BranchBean branchBean = BranchControl.getData();
+    private final BranchBean branchBean = new BranchControl().getData();
     private final DateConvert dateConvert = new DateConvert();
 
     // Scheduler สำหรับ run task ทุกๆ 5 นาที
@@ -141,11 +141,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         });
 
         btnStatus.setText("Status");
-        btnStatus.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnStatusActionPerformed(evt);
-            }
-        });
 
         btnStatus1.setText("Upload Stkfile");
         btnStatus1.addActionListener(new java.awt.event.ActionListener() {
@@ -323,10 +318,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             System.exit(0);
         }
     }
-
-    private void btnStatusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatusActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_btnStatusActionPerformed
 
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(() -> {
