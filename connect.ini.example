@@ -1,0 +1,7 @@
+server,localhost
+database,MyRetail652Local
+db_member,mycrmCenter
+user,root
+pass,nathee2024
+port,3307
+charset,utf-8
