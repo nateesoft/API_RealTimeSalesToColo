@@ -68,7 +68,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             try {
                 System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
                 uploadStcard();
-                btnStatus.setText("Last upload: " + getCurrentTime());
+                javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
                 System.out.println("=== Scheduled upload completed ===");
             } catch (Exception e) {
                 Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
@@ -399,7 +399,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             }
         }
 
-        btnStatus.setEnabled(true);
+        javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setEnabled(true));
     }
 
     private final LocalStkFileControl localStkFile = new LocalStkFileControl();
@@ -483,6 +483,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             dialog.addWindowListener(new java.awt.event.WindowAdapter() {
                 @Override
                 public void windowClosing(java.awt.event.WindowEvent e) {
+                    dialog.scheduler.shutdown();
                     System.exit(0);
                 }
             });
@@ -566,6 +567,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     mm = mm - 1;
                 }
                 if (mm == -1) {
+                    mm = 59;
                     hh = hh - 1;
                 }
                 r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
@@ -652,24 +654,15 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             String[] strsTime = s_No.split("-");
             macno = strsTime[0];
             //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
-            if (s_No.length() == 14 && s_No.substring(3, 6).equals("-1-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-2-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-3-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-4-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-5-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-6-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-7-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-8-")) {
-                r_time = strsTime[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-9-")) {
-                r_time = strsTime[2];
+            if (s_No.length() == 14) {
+                String chkSNO = s_No.substring(3, 6);
+                if (chkSNO.equals("-1-") || chkSNO.equals("-2-") || chkSNO.equals("-3-") || chkSNO.equals("-4-")
+                        || chkSNO.equals("-5-") || chkSNO.equals("-6-") || chkSNO.equals("-7-")
+                        || chkSNO.equals("-8-") || chkSNO.equals("-9-")) {
+                    r_time = strsTime[2];
+                } else {
+                    r_time = strsTime[1];
+                }
             } else {
                 r_time = strsTime[1];
             }
@@ -683,6 +676,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 mm = mm - 1;
             }
             if (mm == -1) {
+                mm = 59;
                 hh = hh - 1;
             }
 
