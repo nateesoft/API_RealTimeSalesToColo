@@ -29,7 +29,7 @@ import util.DateConvert;
  */
 public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
-    private final BranchBean branchBean = new BranchControl().getData();
+    private BranchBean branchBean;
     private final DateConvert dateConvert = new DateConvert();
 
     // Scheduler สำหรับ run task ทุกๆ 5 นาที
@@ -46,13 +46,96 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         System.out.println("Loop For Upload Stcard/Stkfile Update");
         btnUpload.setText(getCurrentTime());
+        lblBranch.setText("กำลังตรวจสอบการเชื่อมต่อ MySQL...");
+        btnStatus.setText("รอการเชื่อมต่อ...");
 
-        if (branchBean != null) {
-            lblBranch.setText("รหัสสาขา : " + branchBean.getCode());
-            btnStatus.setText("Finsished time : " + getCurrentTime());
+        startConnectionCheck();
+    }
 
-            // เริ่มต้น ProcessController และ Scheduler
-            initializeAndStartScheduler();
+    /**
+     * ตรวจสอบการเชื่อมต่อ MySQL ทั้ง Local และ Web ก่อนเริ่มระบบ
+     * Retry ทุก 5 วินาที จนกว่าจะ connect ได้ทั้งคู่
+     */
+    private void startConnectionCheck() {
+        new Thread(() -> {
+            int attempt = 0;
+            while (true) {
+                attempt++;
+                final int currentAttempt = attempt;
+                javax.swing.SwingUtilities.invokeLater(() ->
+                    btnStatus.setText("ตรวจสอบ MySQL... ครั้งที่ " + currentAttempt)
+                );
+
+                boolean localOk = testLocalConnection();
+                boolean webOk = testWebConnection();
+
+                final boolean localStatus = localOk;
+                final boolean webStatus = webOk;
+                System.out.println("Attempt " + currentAttempt
+                        + " | Local MySQL: " + (localOk ? "OK" : "FAIL")
+                        + " | Web MySQL: " + (webOk ? "OK" : "FAIL"));
+
+                if (localOk && webOk) {
+                    branchBean = new BranchControl().getData();
+                    final BranchBean bean = branchBean;
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        if (bean != null) {
+                            lblBranch.setText("รหัสสาขา : " + bean.getCode());
+                            btnStatus.setText("MySQL เชื่อมต่อสำเร็จ : " + getCurrentTime());
+                        } else {
+                            lblBranch.setText("ไม่พบข้อมูลสาขา");
+                            btnStatus.setText("เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา");
+                        }
+                        initializeAndStartScheduler();
+                    });
+                    break;
+                }
+
+                javax.swing.SwingUtilities.invokeLater(() ->
+                    btnStatus.setText("Local: " + (localStatus ? "OK" : "FAIL")
+                            + " | Web: " + (webStatus ? "OK" : "FAIL")
+                            + " | Retry in 5s...")
+                );
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }, "MySQL-ConnectionCheck").start();
+    }
+
+    private boolean testLocalConnection() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            String url = "jdbc:mysql://" + database.MySQLConnect.HostName
+                    + ":" + database.MySQLConnect.PortNumber
+                    + "/" + database.MySQLConnect.DbName
+                    + "?useUnicode=true"
+                    + "&characterEncoding=" + database.MySQLConnect.CharSet
+                    + "&serverTimezone=Asia/Bangkok"
+                    + "&useSSL=false"
+                    + "&connectTimeout=3000";
+            try (java.sql.Connection conn = java.sql.DriverManager.getConnection(
+                    url, database.MySQLConnect.UserName, database.MySQLConnect.Password)) {
+                return conn != null && !conn.isClosed();
+            }
+        } catch (Exception e) {
+            Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName())
+                    .log(Level.WARNING, "Local MySQL FAIL: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean testWebConnection() {
+        database.MySQLConnectWebOnline testConn = new database.MySQLConnectWebOnline();
+        try {
+            testConn.open();
+            return testConn.getConnection() != null;
+        } finally {
+            testConn.close();
         }
     }
 
