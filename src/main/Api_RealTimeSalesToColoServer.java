@@ -1,7 +1,21 @@
 package main;
 
-import com.ics.pos.core.controller.BranchControl;
 import com.ics.bean.BranchBean;
+import com.ics.bean.STCardBean;
+import com.ics.bean.STKFileBean;
+import com.ics.pos.core.controller.BranchControl;
+import com.ics.pos.core.controller.LocalPosHwSetupControl;
+import com.ics.pos.core.controller.LocalSTCardControl;
+import com.ics.pos.core.controller.LocalSTranControl;
+import com.ics.pos.core.controller.LocalStkFileControl;
+import com.ics.pos.core.controller.ServerPosHwSetupControl;
+import com.ics.pos.core.controller.ServerSTCardControl;
+import com.ics.pos.core.controller.ServerStkFileControl;
+import com.ics.pos.core.controller.LocalTSaleControl;
+import java.awt.Color;
+import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -16,26 +30,27 @@ import util.DateConvert;
  */
 public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
-    private ProcessController processController = null;
     private final BranchBean branchBean = new BranchControl().getData();
     private final DateConvert dateConvert = new DateConvert();
 
     // Scheduler สำหรับ run task ทุกๆ 5 นาที
     private ScheduledExecutorService scheduler;
-    private static final int UPLOAD_INTERVAL_MINUTES = 1; // fix 5 for every 5 minutes
+    private static final int UPLOAD_INTERVAL_MINUTES = 5; // fix 5 for every 5 minutes
 
-    public String ErrorText = "Log Error.." + "\r\n";
-    public String LogQuery = "Log SQL.." + "\r\n";
+    private final String TERMINAL_FIXED = "001";
+    private final String STOCK_CODE = "A1";
+    private final String S_REM_SAL = "SAL";
 
     public Api_RealTimeSalesToColoServer() {
         initComponents();
         setState(JFrame.ICONIFIED);
 
         System.out.println("Loop For Upload Stcard/Stkfile Update");
-        btnUpload.setText(dateConvert.GetCurrentTime());
+        btnUpload.setText(getCurrentTime());
+
         if (branchBean != null) {
             lblBranch.setText("รหัสสาขา : " + branchBean.getCode());
-            btnStatus.setText("Finsished time : " + dateConvert.GetCurrentTime());
+            btnStatus.setText("Finsished time : " + getCurrentTime());
 
             // เริ่มต้น ProcessController และ Scheduler
             initializeAndStartScheduler();
@@ -46,20 +61,15 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
      * เริ่มต้น ProcessController และตั้งเวลา upload ทุกๆ 5 นาที
      */
     private void initializeAndStartScheduler() {
-        // สร้าง ProcessController ครั้งเดียว
-        processController = new ProcessController(txtLogErr, btnStatus, lblDisplayStcard,
-                txtSql, lblDisplayStcard1, btnStatus1, pbCheckUpdate);
-        processController.openConnections();
-
         // สร้าง Scheduler ด้วย single thread
         scheduler = Executors.newSingleThreadScheduledExecutor();
 
         // Task ที่จะ run ทุกๆ 5 นาที
         Runnable uploadTask = () -> {
             try {
-                System.out.println("=== Scheduled upload started at: " + dateConvert.GetCurrentTime() + " ===");
-                processController.uploadStcard(branchBean.getCode());
-                btnStatus.setText("Last upload: " + dateConvert.GetCurrentTime());
+                System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
+                uploadStcard();
+                btnStatus.setText("Last upload: " + getCurrentTime());
                 System.out.println("=== Scheduled upload completed ===");
             } catch (Exception e) {
                 Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
@@ -93,19 +103,15 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         pbCheckUpdate = new javax.swing.JProgressBar();
         lblDisplayStcard = new javax.swing.JLabel();
         lblDisplayStcard1 = new javax.swing.JLabel();
+        jButton2 = new javax.swing.JButton();
 
-        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
         setTitle("API_RealtimeOnline");
         setUndecorated(true);
 
         btnUpload.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         btnUpload.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/upload-icon-18.png"))); // NOI18N
         btnUpload.setText("   Click here");
-        btnUpload.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnUploadActionPerformed(evt);
-            }
-        });
 
         jToggleButton1.setFont(new java.awt.Font("Tahoma", 0, 18)); // NOI18N
         jToggleButton1.setForeground(new java.awt.Color(255, 102, 102));
@@ -120,7 +126,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 102, 0));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("API-AutoSales Online V5.10 20260129/14:02");
+        jLabel1.setText("API-AutoSales Online V5.14 2026022/17:14");
 
         txtLogErr.setColumns(20);
         txtLogErr.setRows(5);
@@ -180,6 +186,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         lblDisplayStcard1.setText("DisplaySTKFile");
 
+        jButton2.setFont(new java.awt.Font("Angsana New", 0, 36)); // NOI18N
+        jButton2.setText("เอกสารแก้ไข จากสำนักงานใหญ่");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -187,7 +196,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             .addComponent(btnUpload, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 405, Short.MAX_VALUE)
+                .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 413, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jToggleButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -196,25 +205,26 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(btnStatus, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(jScrollPane2)
                     .addComponent(pbCheckUpdate, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(lblBranch, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jScrollPane2)
                     .addGroup(layout.createSequentialGroup()
                         .addContainerGap()
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(btnStatus1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(btnStatus2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 196, Short.MAX_VALUE))
-                        .addGap(18, 18, 18)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(lblDisplayStcard1, javax.swing.GroupLayout.PREFERRED_SIZE, 291, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(lblDisplayStcard, javax.swing.GroupLayout.PREFERRED_SIZE, 291, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                            .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 507, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addComponent(btnStatus1, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(btnStatus2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 196, Short.MAX_VALUE))
+                                .addGap(18, 18, 18)
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(lblDisplayStcard1, javax.swing.GroupLayout.PREFERRED_SIZE, 291, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(lblDisplayStcard, javax.swing.GroupLayout.PREFERRED_SIZE, 291, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addGap(0, 0, Short.MAX_VALUE)))
                 .addContainerGap())
             .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(lblBranch, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(layout.createSequentialGroup()
-                .addGap(124, 124, 124)
+                .addGap(125, 125, 125)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 262, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(0, 0, Short.MAX_VALUE))
         );
@@ -235,32 +245,28 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btnStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(10, 10, 10)
                 .addComponent(pbCheckUpdate, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(btnStatus1, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lblDisplayStcard1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(lblDisplayStcard1, javax.swing.GroupLayout.DEFAULT_SIZE, 53, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStatus2, javax.swing.GroupLayout.PREFERRED_SIZE, 53, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(lblDisplayStcard, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(lblBranch, javax.swing.GroupLayout.PREFERRED_SIZE, 48, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(41, 41, 41)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jButton2)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(86, 86, 86))
+                .addGap(0, 5, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
-
-    private void btnUploadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnUploadActionPerformed
-        if (processController != null) {
-            processController.uploadCheckConfig();
-        }
-    }//GEN-LAST:event_btnUploadActionPerformed
 
     private void jToggleButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jToggleButton1ActionPerformed
         setState(JFrame.ICONIFIED);
@@ -271,75 +277,244 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }//GEN-LAST:event_jToggleButton2ActionPerformed
 
     private void btnStatus1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatus1ActionPerformed
-        if (processController != null) {
-            new Thread(() -> {
-                processController.uploadStkfile("", branchBean.getCode());
-            }).start();
-        }
+        new Thread(() -> {
+            uploadStkfile("");
+        }).start();
     }//GEN-LAST:event_btnStatus1ActionPerformed
 
     private void btnStatus2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnStatus2ActionPerformed
-        if (processController != null) {
-            new Thread(() -> {
-                processController.uploadStcard(branchBean.getCode());
-            }).start();
-        }
+        new Thread(() -> {
+            uploadStcard();
+        }).start();
     }//GEN-LAST:event_btnStatus2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        shutdown();
+        System.exit(0);
     }//GEN-LAST:event_jButton1ActionPerformed
 
-    /**
-     * ปิด scheduler, connection และจบโปรแกรมอย่างถูกต้อง
-     */
-    private void shutdown() {
-        try {
-            // หยุด Scheduler ก่อน
-            if (scheduler != null && !scheduler.isShutdown()) {
-                System.out.println("Stopping scheduler...");
-                scheduler.shutdown();
-                // รอให้ task ที่กำลังทำงานอยู่เสร็จ (timeout 10 วินาที)
-                if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
-                    scheduler.shutdownNow();
+    private final LocalSTCardControl localStCard = new LocalSTCardControl();
+    private final ServerSTCardControl serverSTCardControl = new ServerSTCardControl();
+
+    private void uploadStcard() {
+        // update last refno
+        uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
+
+        // prepare stcard to send data
+        List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
+        if (!listSTCardNotSend.isEmpty()) {
+            for (int i = 0; i < listSTCardNotSend.size(); i++) {
+                lblDisplayStcard.setText("stcard List = : " + (i + 1) + " From Total =" + listSTCardNotSend.size());
+                double discount = 0;
+                double nettotal = 0;
+                String refund = "";
+                String refno = "";
+                String cashier = "";
+                String emp = "";
+                STCardBean stCardNotSend = (STCardBean) listSTCardNotSend.get(i);
+                STCardBean stcardBean;
+
+                // check S_No digit
+                String checkFirstDigitSNo = stCardNotSend.getS_No().substring(0, 1);
+                if (stCardNotSend.getS_Rem().equals(S_REM_SAL)) {
+                    if (checkFirstDigitSNo.equals("E")) {
+                        discount = 0;
+                        nettotal = stCardNotSend.getS_OutCost();
+                        refund = "-";
+                        refno = stCardNotSend.getS_No();
+                        cashier = stCardNotSend.getEmp();
+                        emp = cashier;
+                    }
+                    if (checkFirstDigitSNo.equals("R") || checkFirstDigitSNo.equals("0")) {
+                        stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode(), checkFirstDigitSNo, stCardNotSend);
+                        discount = stcardBean.getDiscount();
+                        nettotal = stcardBean.getNettotal();
+                        refund = stcardBean.getRefund();
+                        refno = stcardBean.getRefNo();
+                        cashier = stcardBean.getCashier();
+                        emp = stcardBean.getEmp();
+                    }
+                } else {
+                    discount = 0;
+                    if (stCardNotSend.getS_In() != 0) {
+                        nettotal = stCardNotSend.getS_InCost();
+                    } else if (stCardNotSend.getS_OutCost() != 0) {
+                        nettotal = stCardNotSend.getS_OutCost();
+                    }
+                    refund = "-";
+                    refno = "";
+                    cashier = stCardNotSend.getCashier();
+                    emp = cashier;
                 }
-                System.out.println("Scheduler stopped");
+
+                //ถ้า s_rem=  SAL และ E
+                if (stCardNotSend.getS_Rem().equals(S_REM_SAL) && (checkFirstDigitSNo.equals("E") || refno.equals(""))) {
+                    boolean updateStatusFromServer;
+                    if (nettotal == 0 && stCardNotSend.getS_Rem().equals(S_REM_SAL) && stCardNotSend.getS_Out() != 0) {
+                        stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
+                        nettotal = stCardNotSend.getNettotal();
+                    }
+
+                    double unitPrice = 0;
+                    if (stCardNotSend.getS_In() != 0) {
+                        unitPrice = stCardNotSend.getS_InCost() / stCardNotSend.getS_In();
+                    }
+                    if (stCardNotSend.getS_Out() != 0) {
+                        unitPrice = stCardNotSend.getS_OutCost() / stCardNotSend.getS_Out();
+                    }
+
+                    if (!stCardNotSend.getRefNo().equals("")) {
+                        // update server
+                        updateStatusFromServer = serverSTCardControl.saveSTCard(stCardNotSend, discount, nettotal, refund, refno, cashier, emp, unitPrice, branchBean.getCode());
+
+                        if (updateStatusFromServer) {
+                            // update flag local
+                            localStCard.updateSendStatus(stCardNotSend, getCurrentDate(), getCurrentTime());
+                        }
+                    }
+                } else {
+                    //ถ้า s_rem ไม่เท่ากับ SAL
+                    boolean updateStatusFromServer;
+                    if (nettotal == 0 && stCardNotSend.getS_Rem().equals(S_REM_SAL) && stCardNotSend.getS_Out() != 0) {
+                        stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
+                        nettotal = stCardNotSend.getNettotal();
+                    }
+                    double unitPrice = 0;
+                    if (stCardNotSend.getS_In() != 0) {
+                        unitPrice = stCardNotSend.getS_InCost() / stCardNotSend.getS_In();
+                    }
+                    if (stCardNotSend.getS_Out() != 0) {
+                        unitPrice = stCardNotSend.getS_OutCost() / stCardNotSend.getS_Out();
+                    }
+
+                    // update server
+                    updateStatusFromServer = serverSTCardControl.saveSTCard(stCardNotSend, discount, nettotal, refund, refno, cashier, emp, unitPrice, branchBean.getCode());
+
+                    if (updateStatusFromServer) {
+                        // update flag local
+                        localStCard.updateSendStatusDone(stCardNotSend, getCurrentDate(), getCurrentTime());
+
+                        // next step to update stkfile
+                        uploadStkfile(stCardNotSend.getS_PCode());
+                    }
+                }
             }
 
-            // ปิด Connection
-            if (processController != null) {
-                processController.closeConnections();
+            lblDisplayStcard.setBackground(Color.green);
+        }
+
+        btnStatus.setEnabled(true);
+    }
+
+    private final LocalStkFileControl localStkFile = new LocalStkFileControl();
+    private final ServerStkFileControl serverStkFileControl = new ServerStkFileControl();
+
+    private void uploadStkfile(String bpcode) {
+        if (bpcode != null && !bpcode.equals("")) {
+            loadStatus();
+
+            STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
+            if (stkFileBean == null) {
+                stkFileBean = localStkFile.saveNewData(bpcode, branchBean.getCode(), STOCK_CODE);
             }
 
-            System.out.println("Application shutdown gracefully");
-        } catch (InterruptedException e) {
+            // check update server
+            if (stkFileBean != null) {
+                STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(bpcode, branchBean.getCode());
+                if (serverStkFileBean == null) {
+                    serverStkFileControl.saveNewData(bpcode, stkFileBean.getBranch(), STOCK_CODE);
+                }
+
+                // update server stkfile
+                serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
+                lblDisplayStcard1.setBackground(Color.green);
+            }
+        } else {
+            List<STKFileBean> listStkFile = localStkFile.getAllData();
+            if (!listStkFile.isEmpty()) {
+                for (int i = 0; i < listStkFile.size(); i++) {
+                    loadStatus();
+
+                    STKFileBean stkFileBean = (STKFileBean) listStkFile.get(i);
+                    STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(stkFileBean.getbPcode(), stkFileBean.getBranch());
+                    if (serverStkFileBean == null) {
+                        // insert server StkFile
+                        serverStkFileControl.saveNewData(stkFileBean.getbPcode(), stkFileBean.getBranch(), STOCK_CODE);
+                    }
+
+                    serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
+                    btnStatus1.setText("Noplu STKFILE Update : " + i + " " + stkFileBean.getbPcode());
+
+                    // update local time for stkfile
+                    localStkFile.updateTimeData(stkFileBean.getbPcode(), getCurrentDate(), getCurrentTime());
+                    lblDisplayStcard1.setBackground(Color.green);
+                }
+            }
+        }
+    }
+
+    private STCardBean matchDiscount(String s_No, String s_Date, String s_PCode,
+            String checkFirstDigitSNo, STCardBean stCardNotSend) {
+        STCardBean bean = new STCardBean();
+        try {
+            if (s_Date.equals(getCurrentDate())) {
+                bean = processCurrentDate(s_No, checkFirstDigitSNo, s_PCode, s_Date, stCardNotSend);
+            } else {
+                bean = processNotCurrentDate(s_No, checkFirstDigitSNo, s_PCode, s_Date, stCardNotSend.getS_Out(), stCardNotSend.getS_OutCost());
+            }
+        } catch (SQLException e) {
             Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
-        } finally {
-            System.exit(0);
+        }
+
+        return bean;
+    }
+
+    private void loadStatus() {
+        new Thread(() -> {
+            //check ftp file date
+            try {
+                pbCheckUpdate.setStringPainted(true);
+                pbCheckUpdate.setMinimum(0);
+                pbCheckUpdate.setMaximum(100);
+                for (int i = 1; i <= 100; i++) {
+                    pbCheckUpdate.setValue(i);
+                    pbCheckUpdate.setString("LOADDING Data: (" + i + " %)");
+                    try {
+                        Thread.sleep(25);
+                    } catch (InterruptedException e) {
+                    }
+                }
+
+                pbCheckUpdate.setString("Load data Complete ");
+            } catch (Exception e) {
+            }
+        }).start();
+    }
+
+    private double totalCompareNettotal(STCardBean bean) {
+        if (bean.getS_OutCost() != 0 && bean.getS_Rem().equals(S_REM_SAL) && bean.getNettotal() == 0) {
+            bean.setNettotal(bean.getS_OutCost());
+        }
+        return bean.getNettotal();
+
+    }
+
+    private final LocalPosHwSetupControl poshwControl = new LocalPosHwSetupControl();
+    private final ServerPosHwSetupControl poshwServerControl = new ServerPosHwSetupControl();
+
+    private void uploadLastRefno(String terminal, String currentDate, String currentTime, String branchCode) {
+        String receNo1 = poshwControl.getReceNo1ByTerminal(terminal);
+        if (receNo1 != null) {
+            poshwServerControl.updateTime(receNo1, currentDate, currentTime, terminal, branchCode);
         }
     }
 
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(() -> {
             Api_RealTimeSalesToColoServer dialog = new Api_RealTimeSalesToColoServer();
-
-            // เพิ่ม Shutdown Hook สำหรับปิด scheduler และ connection เมื่อ JVM shutdown
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("Shutdown hook triggered");
-                if (dialog.scheduler != null && !dialog.scheduler.isShutdown()) {
-                    dialog.scheduler.shutdownNow();
-                    System.out.println("Shutdown hook: Scheduler stopped");
-                }
-                if (dialog.processController != null) {
-                    dialog.processController.closeConnections();
-                    System.out.println("Shutdown hook: Connections closed");
-                }
-            }));
-
             dialog.addWindowListener(new java.awt.event.WindowAdapter() {
                 @Override
                 public void windowClosing(java.awt.event.WindowEvent e) {
-                    dialog.shutdown();
+                    System.exit(0);
                 }
             });
             dialog.setVisible(true);
@@ -352,6 +527,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private javax.swing.JToggleButton btnStatus2;
     private javax.swing.JToggleButton btnUpload;
     private javax.swing.JButton jButton1;
+    private javax.swing.JButton jButton2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JScrollPane jScrollPane1;
@@ -365,4 +541,241 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private javax.swing.JTextArea txtLogErr;
     private javax.swing.JTextArea txtSql;
     // End of variables declaration//GEN-END:variables
+
+    private final LocalTSaleControl tSaleControl = new LocalTSaleControl();
+    private final DecimalFormat intFM = new DecimalFormat("00");
+
+    private STCardBean processCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode,
+            String s_Date, STCardBean bean) {
+        STCardBean beanMapping;
+        String macno, refno;
+
+        //ถ้าเป็นว่ายกเลิกบิล
+        if (checkFirstDigitSNo.equals("R")) {
+            macno = s_No.substring(2, 5);
+            String[] strs1 = s_No.split("/");
+            refno = strs1[1];
+            beanMapping = tSaleControl.getDataByMacNoRefNoPluCodeFlagRVoid(macno, refno, s_PCode, s_Date, bean.getR_time());
+        } else {
+            //เป็นบิลปกติ ไม่ได้ยกเลิก
+            String[] strs = s_No.split("-");
+            String r_time;
+
+            macno = strs[0];
+            //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
+            if (s_No.length() == 14 && s_No.substring(3, 6).equals("-1-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-2-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-3-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-4-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-5-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-6-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-7-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-8-")) {
+                r_time = strs[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-9-")) {
+                r_time = strs[2];
+            } else {
+                r_time = strs[1];
+            }
+
+            beanMapping = tSaleControl.getDataByPluCodeRdateRTimeRVoid(s_PCode, s_Date, r_time);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            int hh = 0;
+            int mm = 0;
+            int ss = 0;
+            String r_newTime = "";
+
+            //ถ้าเป็นยกเลิกบิล
+            if (!checkFirstDigitSNo.equals("R")) {
+                hh = Integer.parseInt(r_time.substring(0, 2));
+                mm = Integer.parseInt(r_time.substring(3, 5));
+                ss = Integer.parseInt(r_time.substring(6, 8));
+                ss = ss - 1;
+                if (ss == -1) {
+                    ss = 59;
+                    mm = mm - 1;
+                }
+                if (mm == -1) {
+                    hh = hh - 1;
+                }
+                r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
+                beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, true);
+            } else {
+                //ถ้าไม่ใช่การยกเลิกบิล
+                beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            }
+
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 1);
+            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 2);
+            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 3);
+            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 4);
+            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 5);
+            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+        }
+
+        return beanMapping;
+    }
+
+    private final LocalSTranControl localStranControl = new LocalSTranControl();
+    private STCardBean processNotCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode,
+            String s_Date, double s_out, double s_outCost) throws SQLException {
+        DecimalFormat df = new DecimalFormat("#0");
+        String macno;
+        String r_time;
+        String refno;
+
+        String[] strs = s_No.split("-");
+        macno = strs[0];
+        if (s_No.length() == 14 && s_No.substring(3, 6).equals("-1-")) {
+            r_time = strs[2];
+        } else {
+            r_time = strs[1];
+        }
+
+        STCardBean beanMapping;
+
+        //ถ้าเป็นเอกสาร คืนสินค้า
+        if (checkFirstDigitSNo.equals("R")) {
+            macno = s_No.substring(2, 5);
+            String[] strs1 = s_No.split("/");
+            refno = strs1[1];
+            beanMapping = localStranControl.getDataByMacnoTimeDatePluCode(macno, null, s_PCode, s_Date,
+                    refno, df.format(s_out), df.format(s_outCost), checkFirstDigitSNo, s_No);
+        } else {
+            beanMapping = localStranControl.getDataByMacnoTimeDatePluCode(macno, r_time, s_PCode, s_Date,
+                    null, null, null, checkFirstDigitSNo, s_No);
+        }
+
+        if (beanMapping != null) {
+            return beanMapping;
+        }
+
+        if (checkFirstDigitSNo.equals("R")) {
+            String[] strs1 = s_No.split("/");
+            refno = strs1[1];
+            beanMapping = localStranControl.getDataByMacnoRefnoPluCodeRDateFlagVoid(macno, refno, s_PCode, s_Date, checkFirstDigitSNo, s_No);
+        } else {
+            String[] strsTime = s_No.split("-");
+            macno = strsTime[0];
+            //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
+            if (s_No.length() == 14 && s_No.substring(3, 6).equals("-1-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-2-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-3-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-4-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-5-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-6-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-7-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-8-")) {
+                r_time = strsTime[2];
+            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-9-")) {
+                r_time = strsTime[2];
+            } else {
+                r_time = strsTime[1];
+            }
+
+            int hh = Integer.parseInt(r_time.substring(0, 2));
+            int mm = Integer.parseInt(r_time.substring(3, 5));
+            int ss = Integer.parseInt(r_time.substring(6, 8));
+            ss = ss - 1;
+            if (ss == -1) {
+                ss = 59;
+                mm = mm - 1;
+            }
+            if (mm == -1) {
+                hh = hh - 1;
+            }
+
+            if (checkFirstDigitSNo.equals("R")) {
+                macno = s_No.substring(2, 5);
+                String[] strs1 = s_No.split("/");
+                refno = strs1[1];
+                beanMapping = localStranControl.getDataByCondition(macno, refno, s_PCode, s_Date, r_time, true, checkFirstDigitSNo, s_No);
+            } else {
+                String r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
+                beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, null, checkFirstDigitSNo, s_No);
+            }
+
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            String r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 1);
+            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 2);
+            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 3);
+            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 4);
+            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            if (beanMapping != null) {
+                return beanMapping;
+            }
+
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 5);
+            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+        }
+
+        return beanMapping;
+    }
+
+    private String getCurrentDate() {
+        return dateConvert.GetCurrentDate();
+    }
+
+    private String getCurrentTime() {
+        return dateConvert.GetCurrentTime();
+    }
 }

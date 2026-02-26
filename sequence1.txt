@@ -1,0 +1,64 @@
+sequenceDiagram
+    participant Caller
+    participant ProcessController
+    participant LocalDB as MySQL Local DB
+    participant LocalSTCardControl
+    participant ServerSTCardControl
+    participant ServerDB as MySQL Web Online DB
+    participant LocalStkFileControl
+    participant ServerStkFileControl
+
+    Caller->>ProcessController: uploadStcard(branchCode, branchBean)
+    ProcessController->>ProcessController: ensureConnectionsOpen()
+    ProcessController->>ProcessController: uploadLastRefno(branchBean, TERMINAL_FIXED)
+
+    ProcessController->>LocalDB: SELECT * FROM stcard WHERE s_send<>'Y' AND Source_Data<>'WEB'
+    LocalDB-->>ProcessController: listSTCardNotSend[]
+
+    loop สำหรับแต่ละ STCardBean ใน listSTCardNotSend
+        alt s_rem == "SAL"
+            alt s_no เริ่มต้นด้วย "E"
+                ProcessController->>ProcessController: discount=0, nettotal=OutCost, refund="-"
+            else s_no เริ่มต้นด้วย "R" หรือ "0"
+                ProcessController->>ProcessController: matchDiscount(s_no, s_date, s_pcode, prefix)
+                Note right of ProcessController: ดึง discount, nettotal,<br/>refund, refno, cashier, emp
+            end
+        else s_rem != "SAL" (เช่น รับสินค้า/โอน)
+            ProcessController->>ProcessController: discount=0, nettotal=InCost หรือ OutCost
+        end
+
+        ProcessController->>ProcessController: คำนวณ unitPrice (InCost/In หรือ OutCost/Out)
+
+        alt s_rem=="SAL" AND (s_no[0]=="E" OR refno=="")
+            alt refno != ""
+                ProcessController->>ServerSTCardControl: saveSTCard(stCardBean, discount, nettotal, ...)
+                ServerSTCardControl->>ServerDB: INSERT INTO stcard (...)
+                ServerDB-->>ServerSTCardControl: success
+                ServerSTCardControl-->>ProcessController: true
+
+                ProcessController->>LocalSTCardControl: updateSendStatus(stCardBean, date, time)
+                LocalSTCardControl->>LocalDB: UPDATE stcard SET s_send='Y' (Short key)
+            end
+        else s_rem != "SAL" หรือ SAL+refno
+            ProcessController->>ServerSTCardControl: saveSTCard(stCardBean, discount, nettotal, ...)
+            ServerSTCardControl->>ServerDB: INSERT INTO stcard (...)
+            ServerDB-->>ServerSTCardControl: success
+            ServerSTCardControl-->>ProcessController: true
+
+            ProcessController->>LocalSTCardControl: updateSendStatus2(stCardBean, date, time)
+            LocalSTCardControl->>LocalDB: UPDATE stcard SET s_send='Y' (Full key)
+
+            Note over ProcessController: เฉพาะ non-SAL: sync stkfile ด้วย
+            ProcessController->>LocalStkFileControl: getDataByBPCode(pcode)
+            alt stkFileBean == null
+                ProcessController->>LocalStkFileControl: saveNewData(pcode, branchCode)
+            end
+            ProcessController->>ServerStkFileControl: getDataByBPCodeBranchCode(pcode, branchCode)
+            alt serverStkFileBean == null
+                ProcessController->>ServerStkFileControl: saveNewData(pcode, branch)
+            end
+            ProcessController->>ServerStkFileControl: updateData(stkFileBean, date, time)
+        end
+    end
+
+    ProcessController-->>Caller: เสร็จสิ้น

@@ -1,0 +1,110 @@
+sequenceDiagram
+    participant Server as Api_RealTimeSalesToColoServer
+    participant mysql as MySQLConnect (Local)
+    participant LocalPosHw as LocalPosHwSetupControl
+    participant ServerPosHw as ServerPosHwSetupControl
+    participant LocalSTC as LocalSTCardControl
+    participant LocalDB as Local DB (stcard)
+    participant ServerSTC as ServerSTCardControl
+    participant ServerDB as Web Online DB (stcard)
+    participant LocalStkFile as LocalStkFileControl
+    participant ServerStkFile as ServerStkFileControl
+
+    Server->>mysql: open()
+    Note over Server: mysql.getConnection() → mysqlLocal
+
+    %% Step 1: uploadLastRefno
+    Server->>Server: uploadLastRefno(TERMINAL_FIXED)
+    Server->>LocalPosHw: getReceNo1ByTerminal(terminal)
+    LocalPosHw->>LocalDB: SELECT receNo1 WHERE terminal=?
+    LocalDB-->>LocalPosHw: receNo1
+    LocalPosHw-->>Server: receNo1
+    Server->>ServerPosHw: updateTime(receNo1, date, time, terminal, branchCode)
+    ServerPosHw->>ServerDB: UPDATE poshwsetup SET LastUpdate, LastTimeUpdate
+    ServerDB-->>ServerPosHw: ok
+    ServerPosHw-->>Server: done
+
+    %% Step 2: getListSTCardNotSend
+    Server->>LocalSTC: getListSTCardNotSend()
+    LocalSTC->>LocalDB: SELECT * FROM stcard WHERE s_send!='Y' AND Source_Data!='WEB' ORDER BY s_date, s_no, s_pcode, s_entrytime
+    LocalDB-->>LocalSTC: ResultSet rows
+    LocalSTC-->>Server: List<STCardBean>
+
+    alt listSTCardNotSend is not empty
+        Server->>Server: mysqlWebOnline.open()
+
+        loop สำหรับแต่ละ STCardBean
+
+            alt s_rem == "SAL"
+                alt s_no[0] == "E"
+                    Note over Server: discount=0, nettotal=OutCost<br/>refund="-", refno=s_no
+                else s_no[0] == "R" หรือ "0"
+                    Server->>Server: matchDiscount(s_No, s_Date, s_PCode, prefix, stCardBean)
+                    alt s_Date == วันนี้
+                        Server->>Server: processCurrentDate(...)
+                        Note over Server: ดึง refno, cashier, discount,<br/>nettotal จาก tsale/tranin
+                    else s_Date != วันนี้
+                        Server->>Server: processNotCurrentDate(...)
+                        Note over Server: ดึงข้อมูลย้อนหลัง<br/>จาก Local DB
+                    end
+                    Server-->>Server: STCardBean (discount, nettotal, refund, refno, cashier, emp)
+                end
+            else s_rem != "SAL" (รับสินค้า/โอน/อื่นๆ)
+                Note over Server: discount=0<br/>nettotal = InCost หรือ OutCost<br/>refund="-", refno=""
+            end
+
+            Note over Server: คำนวณ unitPrice<br/>(InCost/In หรือ OutCost/Out)
+
+            alt s_rem=="SAL" AND (s_no[0]=="E" OR refno=="")
+                alt refno != ""
+                    Server->>ServerSTC: saveSTCard(stCardBean, discount, nettotal, refund, refno, cashier, emp, unitPrice, branchCode)
+                    ServerSTC->>ServerDB: INSERT INTO stcard (...)
+                    ServerDB-->>ServerSTC: success
+                    ServerSTC-->>Server: true
+
+                    Server->>LocalSTC: updateSendStatus(stCardBean, date, time)
+                    LocalSTC->>LocalDB: UPDATE stcard SET s_send='Y' WHERE pcode, date, entrytime, rem, user, s_no (Short key)
+                    LocalDB-->>LocalSTC: ok
+                end
+            else s_rem != "SAL" หรือ SAL ที่มี refno
+                Server->>ServerSTC: saveSTCard(stCardBean, discount, nettotal, refund, refno, cashier, emp, unitPrice, branchCode)
+                ServerSTC->>ServerDB: INSERT INTO stcard (...)
+                ServerDB-->>ServerSTC: success
+                ServerSTC-->>Server: true
+
+                Server->>LocalSTC: updateSendStatus2(stCardBean, date, time)
+                LocalSTC->>LocalDB: UPDATE stcard SET s_send='Y' WHERE pcode, date, entrytime, rem, user, s_no, incost, in, out, outcost, que (Full key)
+                LocalDB-->>LocalSTC: ok
+
+                Note over Server: uploadStkfile(pcode)
+                Server->>LocalStkFile: getDataByBPCode(pcode)
+                LocalStkFile->>LocalDB: SELECT FROM stkfile WHERE bpcode=?
+                LocalDB-->>LocalStkFile: STKFileBean / null
+
+                alt stkFileBean == null
+                    Server->>LocalStkFile: saveNewData(pcode, branchCode)
+                    LocalStkFile->>LocalDB: INSERT INTO stkfile (...)
+                    LocalDB-->>LocalStkFile: STKFileBean
+                end
+
+                Server->>ServerStkFile: getDataByBPCodeBranchCode(pcode, branchCode)
+                ServerStkFile->>ServerDB: SELECT FROM stkfile WHERE bpcode=? AND branch=?
+                ServerDB-->>ServerStkFile: STKFileBean / null
+
+                alt serverStkFileBean == null
+                    Server->>ServerStkFile: saveNewData(pcode, branch)
+                    ServerStkFile->>ServerDB: INSERT INTO stkfile (...)
+                end
+
+                Server->>ServerStkFile: updateData(stkFileBean, date, time)
+                ServerStkFile->>ServerDB: UPDATE stkfile SET ... WHERE bpcode, branch
+                ServerDB-->>ServerStkFile: ok
+            end
+        end
+
+        Server->>Server: mysqlWebOnline.close()
+        Note over Server: lblDisplayStcard.setBackground(green)
+    end
+
+    Server->>Server: btnStatus.setEnabled(true)
+    Server->>mysql: close()

@@ -9,19 +9,22 @@ import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class BillControl {
+public class BillNoControl {
+    
+    private final MySQLConnect mysqlLocal = new MySQLConnect();
 
     public BillNoBean getData(String billNo) {
-        BillNoBean billNoBean = new BillNoBean();
-        MySQLConnect mysql = new MySQLConnect();
-        mysql.open(BillControl.class);
+        BillNoBean billNoBean = null;
+        
         try {
+            mysqlLocal.open();
             String sql = "select * from billno where B_Refno=? limit 1";
-            PreparedStatement pstmtSelectBillno = mysql.getConnection().prepareStatement(sql);
+            PreparedStatement pstmtSelectBillno = mysqlLocal.getConnection().prepareStatement(sql);
             pstmtSelectBillno.setString(1, billNo);
 
             try (ResultSet rs = pstmtSelectBillno.executeQuery()) {
                 if (rs.next()) {
+                    billNoBean = new BillNoBean();
                     billNoBean.setB_CuponName("");
                     billNoBean.setB_Refno(rs.getString("B_Refno"));
                     billNoBean.setB_CuponDiscAmt(rs.getFloat("B_CuponDiscAmt"));
@@ -110,10 +113,10 @@ public class BillControl {
                     billNoBean.setB_MemEnd(rs.getDate("B_MemEnd"));
                 }
             }
-        } catch (SQLException ex) {
-            Logger.getLogger(BillControl.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException e) {
+            Logger.getLogger(BillNoControl.class.getName()).log(Level.SEVERE, null, e);
         } finally {
-            mysql.closeConnection(this.getClass());
+            mysqlLocal.close();
         }
 
         return billNoBean;

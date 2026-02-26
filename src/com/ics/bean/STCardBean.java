@@ -32,6 +32,9 @@ public class STCardBean {
     private String cashier = "";
     private String emp = "";
     private String r_time = "";
+    
+    private String dataSync = "";
+    private String source_Data = "";
 
     public String getS_Date() {
         return s_Date;
@@ -223,6 +226,22 @@ public class STCardBean {
 
     public void setR_time(String r_time) {
         this.r_time = r_time;
+    }
+
+    public String getDataSync() {
+        return dataSync;
+    }
+
+    public void setDataSync(String dataSync) {
+        this.dataSync = dataSync;
+    }
+
+    public String getSource_Data() {
+        return source_Data;
+    }
+
+    public void setSource_Data(String source_Data) {
+        this.source_Data = source_Data;
     }
 
 }
