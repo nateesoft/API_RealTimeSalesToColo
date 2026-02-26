@@ -12,7 +12,6 @@ import com.ics.pos.core.controller.ServerPosHwSetupControl;
 import com.ics.pos.core.controller.ServerSTCardControl;
 import com.ics.pos.core.controller.ServerStkFileControl;
 import com.ics.pos.core.controller.LocalTSaleControl;
-import java.awt.Color;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.List;
@@ -289,6 +288,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }//GEN-LAST:event_btnStatus2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        scheduler.shutdown();
         System.exit(0);
     }//GEN-LAST:event_jButton1ActionPerformed
 
@@ -303,7 +303,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
         if (!listSTCardNotSend.isEmpty()) {
             for (int i = 0; i < listSTCardNotSend.size(); i++) {
-                lblDisplayStcard.setText("stcard List = : " + (i + 1) + " From Total =" + listSTCardNotSend.size());
                 double discount = 0;
                 double nettotal = 0;
                 String refund = "";
@@ -398,8 +397,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     }
                 }
             }
-
-            lblDisplayStcard.setBackground(Color.green);
         }
 
         btnStatus.setEnabled(true);
@@ -410,7 +407,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private void uploadStkfile(String bpcode) {
         if (bpcode != null && !bpcode.equals("")) {
-            loadStatus();
 
             STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
             if (stkFileBean == null) {
@@ -426,14 +422,11 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
                 // update server stkfile
                 serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
-                lblDisplayStcard1.setBackground(Color.green);
             }
         } else {
             List<STKFileBean> listStkFile = localStkFile.getAllData();
             if (!listStkFile.isEmpty()) {
                 for (int i = 0; i < listStkFile.size(); i++) {
-                    loadStatus();
-
                     STKFileBean stkFileBean = (STKFileBean) listStkFile.get(i);
                     STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(stkFileBean.getbPcode(), stkFileBean.getBranch());
                     if (serverStkFileBean == null) {
@@ -442,11 +435,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     }
 
                     serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
-                    btnStatus1.setText("Noplu STKFILE Update : " + i + " " + stkFileBean.getbPcode());
 
                     // update local time for stkfile
                     localStkFile.updateTimeData(stkFileBean.getbPcode(), getCurrentDate(), getCurrentTime());
-                    lblDisplayStcard1.setBackground(Color.green);
                 }
             }
         }
@@ -466,28 +457,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
 
         return bean;
-    }
-
-    private void loadStatus() {
-        new Thread(() -> {
-            //check ftp file date
-            try {
-                pbCheckUpdate.setStringPainted(true);
-                pbCheckUpdate.setMinimum(0);
-                pbCheckUpdate.setMaximum(100);
-                for (int i = 1; i <= 100; i++) {
-                    pbCheckUpdate.setValue(i);
-                    pbCheckUpdate.setString("LOADDING Data: (" + i + " %)");
-                    try {
-                        Thread.sleep(25);
-                    } catch (InterruptedException e) {
-                    }
-                }
-
-                pbCheckUpdate.setString("Load data Complete ");
-            } catch (Exception e) {
-            }
-        }).start();
     }
 
     private double totalCompareNettotal(STCardBean bean) {
@@ -563,24 +532,15 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
             macno = strs[0];
             //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
-            if (s_No.length() == 14 && s_No.substring(3, 6).equals("-1-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-2-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-3-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-4-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-5-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-6-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-7-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-8-")) {
-                r_time = strs[2];
-            } else if (s_No.length() == 14 && s_No.substring(3, 6).equals("-9-")) {
-                r_time = strs[2];
+            if(s_No.length() == 14) {
+                String chkSNO = s_No.substring(3, 6);
+                if(chkSNO.equals("-1-")||chkSNO.equals("-2-")||chkSNO.equals("-3-")||chkSNO.equals("-4-")
+                        ||chkSNO.equals("-5-")||chkSNO.equals("-6-")||chkSNO.equals("-7-")
+                        ||chkSNO.equals("-8-")||chkSNO.equals("-9-")) {
+                    r_time = strs[2];
+                } else {
+                    r_time = strs[1];
+                }
             } else {
                 r_time = strs[1];
             }
