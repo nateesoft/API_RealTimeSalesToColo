@@ -10,8 +10,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class BranchControl {
-
     private final MySQLConnect mysqlLocal = new MySQLConnect();
+    private final String BRANCH_FIX = "999";
+    private final String BRANCH_FIX_DEFAULT = "sss";
 
     public BranchBean getData() {
 
@@ -25,8 +26,8 @@ public class BranchControl {
                     branchBean = new BranchBean();
                     String bCheck;
                     bCheck = rs.getString("Code");
-                    if (bCheck.equals("999")) {
-                        branchBean.setCode("sss");
+                    if (bCheck.equals(BRANCH_FIX)) {
+                        branchBean.setCode(BRANCH_FIX_DEFAULT);
                     } else {
                         branchBean.setCode(rs.getString("Code"));
                     }

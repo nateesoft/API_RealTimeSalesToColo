@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.ics.pos.core.controller;
 
 import com.ics.bean.STKFileBean;
@@ -12,16 +8,12 @@ import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- *
- * @author nateelive
- */
 public class ServerStkFileControl {
     private final MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
 
     public STKFileBean getDataByBPCodeBranchCode(String bpCode, String branchCode) {
         STKFileBean bean = null;
-        
+
         try {
             mysqlServer.open();
             String sql = "select * from stkfile where bpcode=? and Branch=? limit 1";
@@ -78,39 +70,42 @@ public class ServerStkFileControl {
         STKFileBean stkFileBean = null;
         try {
             mysqlServer.open();
-            String sql = "insert ignore into stkfile (bpcode,branch) values('" + bpCode + "','" + branchCode + "');";
-            if (mysqlServer.getConnection().createStatement().executeUpdate(sql) > 0) {
+            String sql = "insert ignore into stkfile (bpcode, branch) values(?, ?)";
+            PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
+            pstmt.setString(1, bpCode);
+            pstmt.setString(2, branchCode);
+            if (pstmt.executeUpdate() > 0) {
                 stkFileBean = new STKFileBean();
                 stkFileBean.setbPcode(bpCode);
                 stkFileBean.setbStk(stockCode);
                 stkFileBean.setbQty(0);
                 stkFileBean.setbAmt(0);
-                stkFileBean.setbTotalAmt((0));
-                stkFileBean.setbQty0((0));
-                stkFileBean.setbQty1((0));
-                stkFileBean.setbQty2((0));
-                stkFileBean.setbQty3((0));
-                stkFileBean.setbQty4((0));
-                stkFileBean.setbQty5((0));
-                stkFileBean.setbQty6((0));
-                stkFileBean.setbQty7((0));
-                stkFileBean.setbQty8((0));
-                stkFileBean.setbQty9((0));
-                stkFileBean.setbQty10((0));
-                stkFileBean.setbQty11((0));
-                stkFileBean.setbQty12((0));
-                stkFileBean.setbQty13((0));
-                stkFileBean.setbQty14((0));
-                stkFileBean.setbQty15((0));
-                stkFileBean.setbQty16((0));
-                stkFileBean.setbQty17((0));
-                stkFileBean.setbQty18((0));
-                stkFileBean.setbQty19((0));
-                stkFileBean.setbQty20((0));
-                stkFileBean.setbQty21((0));
-                stkFileBean.setbQty22((0));
-                stkFileBean.setbQty23((0));
-                stkFileBean.setbQty24((0));
+                stkFileBean.setbTotalAmt(0);
+                stkFileBean.setbQty0(0);
+                stkFileBean.setbQty1(0);
+                stkFileBean.setbQty2(0);
+                stkFileBean.setbQty3(0);
+                stkFileBean.setbQty4(0);
+                stkFileBean.setbQty5(0);
+                stkFileBean.setbQty6(0);
+                stkFileBean.setbQty7(0);
+                stkFileBean.setbQty8(0);
+                stkFileBean.setbQty9(0);
+                stkFileBean.setbQty10(0);
+                stkFileBean.setbQty11(0);
+                stkFileBean.setbQty12(0);
+                stkFileBean.setbQty13(0);
+                stkFileBean.setbQty14(0);
+                stkFileBean.setbQty15(0);
+                stkFileBean.setbQty16(0);
+                stkFileBean.setbQty17(0);
+                stkFileBean.setbQty18(0);
+                stkFileBean.setbQty19(0);
+                stkFileBean.setbQty20(0);
+                stkFileBean.setbQty21(0);
+                stkFileBean.setbQty22(0);
+                stkFileBean.setbQty23(0);
+                stkFileBean.setbQty24(0);
                 stkFileBean.setBranch(branchCode);
             }
         } catch (SQLException ex) {
@@ -125,28 +120,50 @@ public class ServerStkFileControl {
     public void updateData(STKFileBean stkFileBean, String lastUpdate, String lastTimeUpdate) {
         try {
             mysqlServer.open();
-            String sqlUpdateStkfile = "update stkfile "
-                    + "set bqty='" + stkFileBean.getbQty() + "',bamt='" + stkFileBean.getbAmt() + "',"
-                    + "btotalamt='" + stkFileBean.getbTotalAmt() + "',"
-                    + "bqty0='" + stkFileBean.getbQty0() + "',bqty1='" + stkFileBean.getbQty1() + "',"
-                    + "bqty2='" + stkFileBean.getbQty2() + "',bqty3='" + stkFileBean.getbQty3() + "',"
-                    + "bqty4='" + stkFileBean.getbQty4() + "',bqty5='" + stkFileBean.getbQty5() + "',"
-                    + "bqty6='" + stkFileBean.getbQty6() + "',bqty7='" + stkFileBean.getbQty7() + "',"
-                    + "bqty8='" + stkFileBean.getbQty8() + "',bqty9='" + stkFileBean.getbQty9() + "',"
-                    + "bqty10='" + stkFileBean.getbQty10() + "',"
-                    + "bqty11='" + stkFileBean.getbQty11() + "',bqty12='" + stkFileBean.getbQty12() + "',"
-                    + "bqty13='" + stkFileBean.getbQty13() + "',bqty14='" + stkFileBean.getbQty14() + "',"
-                    + "bqty15='" + stkFileBean.getbQty15() + "',"
-                    + "bqty16='" + stkFileBean.getbQty16() + "',bqty17='" + stkFileBean.getbQty17() + "',"
-                    + "bqty18='" + stkFileBean.getbQty18() + "',bqty19='" + stkFileBean.getbQty19() + "',"
-                    + "bqty20='" + stkFileBean.getbQty20() + "',"
-                    + "bqty21='" + stkFileBean.getbQty21() + "',bqty22='" + stkFileBean.getbQty22() + "',"
-                    + "bqty23='" + stkFileBean.getbQty23() + "',bqty24='" + stkFileBean.getbQty24() + "',"
-                    + "branch='" + stkFileBean.getBranch() + "',"
-                    + "lastupdate='" + lastUpdate + "' ,lastTimeUpdate='" + lastTimeUpdate + "' "
-                    + "where bpcode='" + stkFileBean.getbPcode() + "' "
-                    + "and branch='" + stkFileBean.getBranch() + "'";
-            mysqlServer.getConnection().createStatement().executeUpdate(sqlUpdateStkfile);
+            String sql = "update stkfile set "
+                    + "bqty=?, bamt=?, btotalamt=?, "
+                    + "bqty0=?, bqty1=?, bqty2=?, bqty3=?, bqty4=?, bqty5=?, "
+                    + "bqty6=?, bqty7=?, bqty8=?, bqty9=?, bqty10=?, "
+                    + "bqty11=?, bqty12=?, bqty13=?, bqty14=?, bqty15=?, "
+                    + "bqty16=?, bqty17=?, bqty18=?, bqty19=?, bqty20=?, "
+                    + "bqty21=?, bqty22=?, bqty23=?, bqty24=?, "
+                    + "branch=?, lastupdate=?, lastTimeUpdate=? "
+                    + "where bpcode=? and branch=?";
+            PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
+            pstmt.setDouble(1, stkFileBean.getbQty());
+            pstmt.setDouble(2, stkFileBean.getbAmt());
+            pstmt.setDouble(3, stkFileBean.getbTotalAmt());
+            pstmt.setDouble(4, stkFileBean.getbQty0());
+            pstmt.setDouble(5, stkFileBean.getbQty1());
+            pstmt.setDouble(6, stkFileBean.getbQty2());
+            pstmt.setDouble(7, stkFileBean.getbQty3());
+            pstmt.setDouble(8, stkFileBean.getbQty4());
+            pstmt.setDouble(9, stkFileBean.getbQty5());
+            pstmt.setDouble(10, stkFileBean.getbQty6());
+            pstmt.setDouble(11, stkFileBean.getbQty7());
+            pstmt.setDouble(12, stkFileBean.getbQty8());
+            pstmt.setDouble(13, stkFileBean.getbQty9());
+            pstmt.setDouble(14, stkFileBean.getbQty10());
+            pstmt.setDouble(15, stkFileBean.getbQty11());
+            pstmt.setDouble(16, stkFileBean.getbQty12());
+            pstmt.setDouble(17, stkFileBean.getbQty13());
+            pstmt.setDouble(18, stkFileBean.getbQty14());
+            pstmt.setDouble(19, stkFileBean.getbQty15());
+            pstmt.setDouble(20, stkFileBean.getbQty16());
+            pstmt.setDouble(21, stkFileBean.getbQty17());
+            pstmt.setDouble(22, stkFileBean.getbQty18());
+            pstmt.setDouble(23, stkFileBean.getbQty19());
+            pstmt.setDouble(24, stkFileBean.getbQty20());
+            pstmt.setDouble(25, stkFileBean.getbQty21());
+            pstmt.setDouble(26, stkFileBean.getbQty22());
+            pstmt.setDouble(27, stkFileBean.getbQty23());
+            pstmt.setDouble(28, stkFileBean.getbQty24());
+            pstmt.setString(29, stkFileBean.getBranch());
+            pstmt.setString(30, lastUpdate);
+            pstmt.setString(31, lastTimeUpdate);
+            pstmt.setString(32, stkFileBean.getbPcode());
+            pstmt.setString(33, stkFileBean.getBranch());
+            pstmt.executeUpdate();
         } catch (SQLException ex) {
             Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {

@@ -132,8 +132,11 @@ public class LocalStkFileControl {
         STKFileBean stkFileBean = null;
         try {
             mysqlLocal.open();
-            String sql = "insert ignore into stkfile (bpcode,branch) values('" + bpCode + "','" + branchCode + "');";
-            if (mysqlLocal.getConnection().createStatement().executeUpdate(sql) > 0) {
+            String sql = "insert ignore into stkfile (bpcode, branch) values(?, ?)";
+            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
+            pstmt.setString(1, bpCode);
+            pstmt.setString(2, branchCode);
+            if (pstmt.executeUpdate() > 0) {
                 stkFileBean = new STKFileBean();
                 stkFileBean.setbPcode(bpCode);
                 stkFileBean.setbStk(stockCode);
@@ -179,11 +182,12 @@ public class LocalStkFileControl {
     public void updateTimeData(String bPcode, String currentData, String currentTime) {
         try {
             mysqlLocal.open();
-            String sqlUpdateSendWeb = "update stkfile set "
-                    + "Lastupdate='" + currentData + "',"
-                    + "LastTimeUpdate='" + currentTime + "' "
-                    + "where bpcode='" + bPcode + "'";
-            mysqlLocal.getConnection().createStatement().executeUpdate(sqlUpdateSendWeb);
+            String sql = "update stkfile set Lastupdate=?, LastTimeUpdate=? where bpcode=?";
+            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
+            pstmt.setString(1, currentData);
+            pstmt.setString(2, currentTime);
+            pstmt.setString(3, bPcode);
+            pstmt.executeUpdate();
         } catch (SQLException e) {
             Logger.getLogger(LocalStkFileControl.class.getName()).log(Level.SEVERE, null, e);
         } finally {

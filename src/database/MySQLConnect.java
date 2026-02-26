@@ -3,7 +3,6 @@ package database;
 import com.ics.constants.Value;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -31,11 +30,8 @@ public class MySQLConnect {
 
     /* ===================== Load Config ===================== */
     static {
-        try {
-            FileInputStream fs = new FileInputStream(Value.FILE_CONFIG);
-            DataInputStream ds = new DataInputStream(fs);
-            BufferedReader br = new BufferedReader(new InputStreamReader(ds, "UTF-8"));
-
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(new FileInputStream(Value.FILE_CONFIG), "UTF-8"))) {
             String tmp;
             while ((tmp = br.readLine()) != null) {
                 String[] data = tmp.split(",", -1);
@@ -63,11 +59,6 @@ public class MySQLConnect {
                         break;
                 }
             }
-
-            br.close();
-            ds.close();
-            fs.close();
-
         } catch (IOException ex) {
             Logger.getLogger(MySQLConnect.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -92,7 +83,7 @@ public class MySQLConnect {
         close();
 
         try {
-            Class.forName("com.mysql.jdbc.Driver");
+            Class.forName("com.mysql.cj.jdbc.Driver");
 
             String url = "jdbc:mysql://" + HostName + ":" + PortNumber + "/" + DbName
                     + "?useUnicode=true"
