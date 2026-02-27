@@ -31,7 +31,8 @@ public class MySQLConnectWebOnline {
             String url = "jdbc:mysql://" + HostName + ":" + PortNumber + "/" + DbName
                     + "?characterEncoding=utf-8"
                     + "&serverTimezone=Asia/Bangkok"
-                    + "&useSSL=false";
+                    + "&useSSL=false"
+                    + "&rewriteBatchedStatements=true";
             con = DriverManager.getConnection(url, UserName, Password);
         } catch (ClassNotFoundException | SQLException ex) {
             Logger.getLogger(MySQLConnectWebOnline.class.getName()).log(Level.SEVERE, null, ex);

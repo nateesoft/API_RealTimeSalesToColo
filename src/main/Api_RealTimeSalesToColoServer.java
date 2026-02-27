@@ -14,6 +14,7 @@ import com.ics.pos.core.controller.ServerStkFileControl;
 import com.ics.pos.core.controller.LocalTSaleControl;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -384,100 +385,91 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         // prepare stcard to send data
         List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
-        if (!listSTCardNotSend.isEmpty()) {
-            for (int i = 0; i < listSTCardNotSend.size(); i++) {
-                double discount = 0;
-                double nettotal = 0;
-                String refund = "";
-                String refno = "";
-                String cashier = "";
-                String emp = "";
-                STCardBean stCardNotSend = (STCardBean) listSTCardNotSend.get(i);
-                STCardBean stcardBean;
+        if (listSTCardNotSend.isEmpty()) {
+            javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setEnabled(true));
+            return;
+        }
 
-                // check S_No digit
-                String checkFirstDigitSNo = stCardNotSend.getS_No().substring(0, 1);
-                if (stCardNotSend.getS_Rem().equals(S_REM_SAL)) {
-                    if (checkFirstDigitSNo.equals("E")) {
-                        discount = 0;
-                        nettotal = stCardNotSend.getS_OutCost();
-                        refund = "-";
-                        refno = stCardNotSend.getS_No();
-                        cashier = stCardNotSend.getEmp();
-                        emp = cashier;
-                    }
-                    if (checkFirstDigitSNo.equals("R") || checkFirstDigitSNo.equals("0")) {
-                        stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode(), checkFirstDigitSNo, stCardNotSend);
-                        discount = stcardBean.getDiscount();
-                        nettotal = stcardBean.getNettotal();
-                        refund = stcardBean.getRefund();
-                        refno = stcardBean.getRefNo();
-                        cashier = stcardBean.getCashier();
-                        emp = stcardBean.getEmp();
-                    }
-                } else {
-                    discount = 0;
-                    if (stCardNotSend.getS_In() != 0) {
-                        nettotal = stCardNotSend.getS_InCost();
-                    } else if (stCardNotSend.getS_OutCost() != 0) {
-                        nettotal = stCardNotSend.getS_OutCost();
-                    }
+        // Phase 1: compute all values and collect valid items for batch insert
+        List<ServerSTCardControl.STCardUploadParam> batchParams = new ArrayList<>();
+        for (STCardBean stCardNotSend : listSTCardNotSend) {
+            double discount = 0;
+            double nettotal = 0;
+            String refund = "";
+            String refno = "";
+            String cashier = "";
+            String emp = "";
+
+            // check S_No digit
+            String checkFirstDigitSNo = stCardNotSend.getS_No().substring(0, 1);
+            if (stCardNotSend.getS_Rem().equals(S_REM_SAL)) {
+                if (checkFirstDigitSNo.equals("E")) {
+                    nettotal = stCardNotSend.getS_OutCost();
                     refund = "-";
-                    refno = "";
-                    cashier = stCardNotSend.getCashier();
+                    refno = stCardNotSend.getS_No();
+                    cashier = stCardNotSend.getEmp();
                     emp = cashier;
                 }
+                if (checkFirstDigitSNo.equals("R") || checkFirstDigitSNo.equals("0")) {
+                    STCardBean stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode(), checkFirstDigitSNo, stCardNotSend);
+                    discount = stcardBean.getDiscount();
+                    nettotal = stcardBean.getNettotal();
+                    refund = stcardBean.getRefund();
+                    refno = stcardBean.getRefNo();
+                    cashier = stcardBean.getCashier();
+                    emp = stcardBean.getEmp();
+                }
+            } else {
+                if (stCardNotSend.getS_In() != 0) {
+                    nettotal = stCardNotSend.getS_InCost();
+                } else if (stCardNotSend.getS_OutCost() != 0) {
+                    nettotal = stCardNotSend.getS_OutCost();
+                }
+                refund = "-";
+                cashier = stCardNotSend.getCashier();
+                emp = cashier;
+            }
 
-                //ถ้า s_rem=  SAL และ E
-                if (stCardNotSend.getS_Rem().equals(S_REM_SAL) && (checkFirstDigitSNo.equals("E") || refno.equals(""))) {
-                    boolean updateStatusFromServer;
-                    if (nettotal == 0 && stCardNotSend.getS_Rem().equals(S_REM_SAL) && stCardNotSend.getS_Out() != 0) {
-                        stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
-                        nettotal = stCardNotSend.getNettotal();
-                    }
+            boolean isSalType = stCardNotSend.getS_Rem().equals(S_REM_SAL) && (checkFirstDigitSNo.equals("E") || refno.equals(""));
 
-                    double unitPrice = 0;
-                    if (stCardNotSend.getS_In() != 0) {
-                        unitPrice = stCardNotSend.getS_InCost() / stCardNotSend.getS_In();
-                    }
-                    if (stCardNotSend.getS_Out() != 0) {
-                        unitPrice = stCardNotSend.getS_OutCost() / stCardNotSend.getS_Out();
-                    }
+            if (nettotal == 0 && stCardNotSend.getS_Rem().equals(S_REM_SAL) && stCardNotSend.getS_Out() != 0) {
+                stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
+                nettotal = stCardNotSend.getNettotal();
+            }
 
-                    if (!stCardNotSend.getRefNo().equals("")) {
-                        // update server
-                        updateStatusFromServer = serverSTCardControl.saveSTCard(stCardNotSend, discount, nettotal, refund, refno, cashier, emp, unitPrice, branchBean.getCode());
+            double unitPrice = 0;
+            if (stCardNotSend.getS_In() != 0) {
+                unitPrice = stCardNotSend.getS_InCost() / stCardNotSend.getS_In();
+            }
+            if (stCardNotSend.getS_Out() != 0) {
+                unitPrice = stCardNotSend.getS_OutCost() / stCardNotSend.getS_Out();
+            }
 
-                        if (updateStatusFromServer) {
-                            // update flag local
-                            localStCard.updateSendStatus(stCardNotSend, getCurrentDate(), getCurrentTime());
-                        }
-                    }
+            // skip SAL-type items with empty refNo (same as original logic)
+            if (isSalType && stCardNotSend.getRefNo().equals("")) {
+                continue;
+            }
+
+            batchParams.add(new ServerSTCardControl.STCardUploadParam(
+                    stCardNotSend, discount, nettotal, refund, refno,
+                    cashier, emp, unitPrice, branchBean.getCode(), isSalType));
+        }
+
+        // Phase 2: batch insert all valid items to server (single connection)
+        boolean[] results = serverSTCardControl.saveSTCardBatch(batchParams);
+
+        // Phase 3: update local flags based on batch results
+        for (int i = 0; i < batchParams.size(); i++) {
+            if (results[i]) {
+                ServerSTCardControl.STCardUploadParam p = batchParams.get(i);
+                if (p.isSalType) {
+                    // update flag local
+                    localStCard.updateSendStatus(p.bean, getCurrentDate(), getCurrentTime());
                 } else {
-                    //ถ้า s_rem ไม่เท่ากับ SAL
-                    boolean updateStatusFromServer;
-                    if (nettotal == 0 && stCardNotSend.getS_Rem().equals(S_REM_SAL) && stCardNotSend.getS_Out() != 0) {
-                        stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
-                        nettotal = stCardNotSend.getNettotal();
-                    }
-                    double unitPrice = 0;
-                    if (stCardNotSend.getS_In() != 0) {
-                        unitPrice = stCardNotSend.getS_InCost() / stCardNotSend.getS_In();
-                    }
-                    if (stCardNotSend.getS_Out() != 0) {
-                        unitPrice = stCardNotSend.getS_OutCost() / stCardNotSend.getS_Out();
-                    }
-
-                    // update server
-                    updateStatusFromServer = serverSTCardControl.saveSTCard(stCardNotSend, discount, nettotal, refund, refno, cashier, emp, unitPrice, branchBean.getCode());
-
-                    if (updateStatusFromServer) {
-                        // update flag local
-                        localStCard.updateSendStatusDone(stCardNotSend, getCurrentDate(), getCurrentTime());
-
-                        // next step to update stkfile
-                        uploadStkfile(stCardNotSend.getS_PCode());
-                    }
+                    // update flag local
+                    localStCard.updateSendStatusDone(p.bean, getCurrentDate(), getCurrentTime());
+                    // next step to update stkfile
+                    uploadStkfile(p.bean.getS_PCode());
                 }
             }
         }
