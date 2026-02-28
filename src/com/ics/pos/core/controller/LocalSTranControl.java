@@ -191,4 +191,61 @@ public class LocalSTranControl {
 
         return bean;
     }
+    
+    public STCardBean getDataByConditionBetweenTime(String macno, String refno, String s_PCode, 
+            String s_Date, String r_time, Boolean isVoid,
+            String checkFirstDigitSNo, String s_No) {
+        String sql = "select r_refno, r_total, r_nettotal, r_pramt, r_discbath, "
+                + " r_refno, r_refund, cashier Cashier, "
+                + "r_emp R_Emp,r_time,r_void "
+                + "from s_tran where macno=? and r_time=? and r_plucode=? and r_date=? ";
+        if (isVoid != null) {
+            if (refno != null) {
+                sql += " and r_refno='" + refno + "' ";
+            }
+            if (isVoid == true) {
+                sql += " and r_void='V' ";
+            } else if (isVoid == false) {
+                sql += " and r_void<>'V' ";
+            }
+        }
+        sql += " limit 1 ";
+
+        STCardBean bean = null;
+        try {
+            mysqlLocal.open();
+            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
+            pstmt.setString(1, macno);
+            pstmt.setString(2, r_time);
+            pstmt.setString(3, s_PCode);
+            pstmt.setString(4, s_Date);
+
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                bean = new STCardBean();
+
+                bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
+                bean.setNettotal(rs.getDouble("R_Nettotal"));
+                bean.setRefund(rs.getString("R_Refund"));
+                if (checkFirstDigitSNo.equals("R")) {
+                    bean.setRefNo(s_No);
+                } else {
+                    bean.setRefNo(rs.getString("R_Refno"));
+                }
+
+                bean.setCashier(rs.getString("Cashier"));
+                bean.setEmp(rs.getString("R_Emp"));
+                
+                if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
+                    bean.setNettotal(0);
+                }
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+        } finally {
+            mysqlLocal.close();
+        }
+
+        return bean;
+    }
 }

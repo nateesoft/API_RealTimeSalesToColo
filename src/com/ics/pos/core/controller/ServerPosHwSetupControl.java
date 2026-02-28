@@ -12,7 +12,10 @@ public class ServerPosHwSetupControl {
     public void updateTime(String receNo1, String lastupdate, String lastTimeUpdate, String terminal, String branchCode) {
         try {
             mysqlServer.open();
-            String sql = "update poshwsetup set receno1=?, Lastupdate=?, LastTimeUpdate=? "
+            String sql = "update poshwsetup "
+                    + "set receno1=?, "
+                    + "Lastupdate=?, "
+                    + "LastTimeUpdate=? "
                     + "where branch=? and terminal=?";
             PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
             pstmt.setString(1, receNo1);

@@ -16,7 +16,9 @@ public class ServerStkFileControl {
 
         try {
             mysqlServer.open();
-            String sql = "select * from stkfile where bpcode=? and Branch=? limit 1";
+            String sql = "select * from stkfile "
+                    + "where bpcode=? and Branch=? "
+                    + "limit 1";
             PreparedStatement psmtQuery = mysqlServer.getConnection().prepareStatement(sql);
             psmtQuery.setString(1, bpCode);
             psmtQuery.setString(2, branchCode);

@@ -39,7 +39,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private final String TERMINAL_FIXED = "001";
     private final String STOCK_CODE = "A1";
-    private final String S_REM_SAL = "SAL";
 
     public Api_RealTimeSalesToColoServer() {
         initComponents();
@@ -109,24 +108,11 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }
 
     private boolean testLocalConnection() {
+        database.MySQLConnect testConn = new database.MySQLConnect();
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            String url = "jdbc:mysql://" + database.MySQLConnect.HostName
-                    + ":" + database.MySQLConnect.PortNumber
-                    + "/" + database.MySQLConnect.DbName
-                    + "?useUnicode=true"
-                    + "&characterEncoding=" + database.MySQLConnect.CharSet
-                    + "&serverTimezone=Asia/Bangkok"
-                    + "&useSSL=false"
-                    + "&connectTimeout=3000";
-            try (java.sql.Connection conn = java.sql.DriverManager.getConnection(
-                    url, database.MySQLConnect.UserName, database.MySQLConnect.Password)) {
-                return conn != null && !conn.isClosed();
-            }
-        } catch (Exception e) {
-            Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName())
-                    .log(Level.WARNING, "Local MySQL FAIL: " + e.getMessage());
-            return false;
+            testConn.open();
+            return testConn.getConnection() != null;
+        } finally {
         }
     }
 
@@ -380,79 +366,29 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private final ServerSTCardControl serverSTCardControl = new ServerSTCardControl();
 
     private void uploadStcard() {
-        // update last refno
-        uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
-
         // prepare stcard to send data
         List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
         if (listSTCardNotSend.isEmpty()) {
             javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setEnabled(true));
             return;
         }
+        
+        // update last refno
+        uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
 
         // Phase 1: compute all values and collect valid items for batch insert
         List<ServerSTCardControl.STCardUploadParam> batchParams = new ArrayList<>();
         for (STCardBean stCardNotSend : listSTCardNotSend) {
-            double discount = 0;
-            double nettotal = 0;
-            String refund = "";
-            String refno = "";
-            String cashier = "";
-            String emp = "";
+            StcardUploadLogic.ComputedParams params =
+                    StcardUploadLogic.computeParams(stCardNotSend, this::matchDiscount);
 
-            // check S_No digit
-            String checkFirstDigitSNo = stCardNotSend.getS_No().substring(0, 1);
-            if (stCardNotSend.getS_Rem().equals(S_REM_SAL)) {
-                if (checkFirstDigitSNo.equals("E")) {
-                    nettotal = stCardNotSend.getS_OutCost();
-                    refund = "-";
-                    refno = stCardNotSend.getS_No();
-                    cashier = stCardNotSend.getEmp();
-                    emp = cashier;
-                }
-                if (checkFirstDigitSNo.equals("R") || checkFirstDigitSNo.equals("0")) {
-                    STCardBean stcardBean = matchDiscount(stCardNotSend.getS_No(), stCardNotSend.getS_Date(), stCardNotSend.getS_PCode(), checkFirstDigitSNo, stCardNotSend);
-                    discount = stcardBean.getDiscount();
-                    nettotal = stcardBean.getNettotal();
-                    refund = stcardBean.getRefund();
-                    refno = stcardBean.getRefNo();
-                    cashier = stcardBean.getCashier();
-                    emp = stcardBean.getEmp();
-                }
-            } else {
-                if (stCardNotSend.getS_In() != 0) {
-                    nettotal = stCardNotSend.getS_InCost();
-                } else if (stCardNotSend.getS_OutCost() != 0) {
-                    nettotal = stCardNotSend.getS_OutCost();
-                }
-                refund = "-";
-                cashier = stCardNotSend.getCashier();
-                emp = cashier;
-            }
-
-            boolean isSalType = stCardNotSend.getS_Rem().equals(S_REM_SAL) && (checkFirstDigitSNo.equals("E") || refno.equals(""));
-
-            if (nettotal == 0 && stCardNotSend.getS_Rem().equals(S_REM_SAL) && stCardNotSend.getS_Out() != 0) {
-                stCardNotSend.setNettotal(totalCompareNettotal(stCardNotSend));
-                nettotal = stCardNotSend.getNettotal();
-            }
-
-            double unitPrice = 0;
-            if (stCardNotSend.getS_In() != 0) {
-                unitPrice = stCardNotSend.getS_InCost() / stCardNotSend.getS_In();
-            }
-            if (stCardNotSend.getS_Out() != 0) {
-                unitPrice = stCardNotSend.getS_OutCost() / stCardNotSend.getS_Out();
-            }
-
-            // skip SAL-type items with empty refNo (same as original logic)
-            if (isSalType && stCardNotSend.getRefNo().equals("")) {
+            if (params.shouldSkip) {
                 continue;
             }
 
             batchParams.add(new ServerSTCardControl.STCardUploadParam(
-                    stCardNotSend, discount, nettotal, refund, refno,
-                    cashier, emp, unitPrice, branchBean.getCode(), isSalType));
+                    stCardNotSend, params.discount, params.nettotal, params.refund, params.refno,
+                    params.cashier, params.emp, params.unitPrice, branchBean.getCode(), params.isSalType));
         }
 
         // Phase 2: batch insert all valid items to server (single connection)
@@ -532,14 +468,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
 
         return bean;
-    }
-
-    private double totalCompareNettotal(STCardBean bean) {
-        if (bean.getS_OutCost() != 0 && bean.getS_Rem().equals(S_REM_SAL) && bean.getNettotal() == 0) {
-            bean.setNettotal(bean.getS_OutCost());
-        }
-        return bean.getNettotal();
-
     }
 
     private final LocalPosHwSetupControl poshwControl = new LocalPosHwSetupControl();
@@ -742,9 +670,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 r_time = strsTime[1];
             }
 
-            int hh = Integer.parseInt(r_time.substring(0, 2));
-            int mm = Integer.parseInt(r_time.substring(3, 5));
-            int ss = Integer.parseInt(r_time.substring(6, 8));
+            String []strTimes = r_time.split(":");
+            int hh = Integer.parseInt(strTimes[0]);
+            int mm = Integer.parseInt(strTimes[1]);
+            int ss = Integer.parseInt(strTimes[2]);
             ss = ss - 1;
             if (ss == -1) {
                 ss = 59;
@@ -770,31 +699,31 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             }
 
             String r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 1);
-            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 2);
-            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 3);
-            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 4);
-            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 5);
-            beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
+            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
         }
 
         return beanMapping;

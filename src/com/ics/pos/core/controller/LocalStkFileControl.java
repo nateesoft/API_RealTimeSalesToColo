@@ -182,7 +182,9 @@ public class LocalStkFileControl {
     public void updateTimeData(String bPcode, String currentData, String currentTime) {
         try {
             mysqlLocal.open();
-            String sql = "update stkfile set Lastupdate=?, LastTimeUpdate=? where bpcode=?";
+            String sql = "update stkfile set "
+                    + "Lastupdate=?, "
+                    + "LastTimeUpdate=? where bpcode=?";
             PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
             pstmt.setString(1, currentData);
             pstmt.setString(2, currentTime);

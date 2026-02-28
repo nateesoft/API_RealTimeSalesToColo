@@ -18,7 +18,8 @@ public class BillNoControl {
         
         try {
             mysqlLocal.open();
-            String sql = "select * from billno where B_Refno=? limit 1";
+            String sql = "select * from billno "
+                    + "where B_Refno=? limit 1";
             PreparedStatement pstmtSelectBillno = mysqlLocal.getConnection().prepareStatement(sql);
             pstmtSelectBillno.setString(1, billNo);
 

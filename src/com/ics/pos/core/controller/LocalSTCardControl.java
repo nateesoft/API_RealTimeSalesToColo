@@ -18,7 +18,8 @@ public class LocalSTCardControl {
         try {
             mysqlLocal.open();
             String sql = "select * from stcard "
-                    + "where s_send <> 'Y' and Source_Data <> 'WEB' "
+                    + "where s_send <> 'Y' "
+                    + "and Source_Data <> 'WEB' "
                     + "order by s_date, s_no, s_pcode, s_entrytime";
             PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
             try (ResultSet rs = psmtQuery.executeQuery()) {
@@ -56,9 +57,14 @@ public class LocalSTCardControl {
     public boolean updateSendStatus(STCardBean stCardNotSend, String lastUpdate, String lastTimeUpdate) {
         try {
             mysqlLocal.open();
-            String sql = "update stcard set s_send='Y', LastUpdate=?, LastTimeUpdate=? "
-                    + "where s_pcode=? and s_date=? and s_entrytime=? "
-                    + "and s_rem=? and s_user=? and s_send='N' and s_no=?";
+            String sql = "update stcard "
+                    + "set s_send='Y', "
+                    + "LastUpdate=?, "
+                    + "LastTimeUpdate=? "
+                    + "where s_pcode=? "
+                    + "and s_date=? and s_entrytime=? "
+                    + "and s_rem=? and s_user=? "
+                    + "and s_send='N' and s_no=?";
             PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
             pstmt.setString(1, lastUpdate);
             pstmt.setString(2, lastTimeUpdate);
@@ -81,10 +87,14 @@ public class LocalSTCardControl {
     public boolean updateSendStatusDone(STCardBean stCardNotSend, String lastUpdate, String lastTimeUpdate) {
         try {
             mysqlLocal.open();
-            String sql = "update stcard set s_send='Y', LastUpdate=?, LastTimeUpdate=? "
+            String sql = "update stcard "
+                    + "set s_send='Y', "
+                    + "LastUpdate=?, "
+                    + "LastTimeUpdate=? "
                     + "where s_pcode=? and s_date=? and s_entrytime=? "
                     + "and s_rem=? and s_user=? and s_send='N' and s_no=? "
-                    + "and s_incost=? and s_in=? and s_out=? and s_outcost=? and s_que=?";
+                    + "and s_incost=? and s_in=? and s_out=? "
+                    + "and s_outcost=? and s_que=?";
             PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
             pstmt.setString(1, lastUpdate);
             pstmt.setString(2, lastTimeUpdate);

@@ -27,7 +27,7 @@ public class MySQLConnectWebOnline {
     public void open() {
         close();
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName("com.mysql.jdbc.Driver");
             String url = "jdbc:mysql://" + HostName + ":" + PortNumber + "/" + DbName
                     + "?characterEncoding=utf-8"
                     + "&serverTimezone=Asia/Bangkok"

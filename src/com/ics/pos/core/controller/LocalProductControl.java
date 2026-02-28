@@ -21,7 +21,8 @@ public class LocalProductControl {
     public double getProductPSCostByPCode(String pCode) {        
         try {
             mysqlLocal.open();
-            String sql = "select pscost, pacost, plcost from product where pcode = ?";
+            String sql = "select pscost, pacost, plcost "
+                    + "from product where pcode = ?";
             PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
             psmtQuery.setString(1, pCode);
             try (ResultSet rs = psmtQuery.executeQuery()) {
