@@ -70,6 +70,10 @@ class StcardUploadLogic {
             if (checkFirstDigitSNo.equals("R") || checkFirstDigitSNo.equals("0")) {
                 STCardBean matched = matchDiscountFn.match(
                         bean.getS_No(), bean.getS_Date(), bean.getS_PCode(), checkFirstDigitSNo, bean);
+                if(matched == null){
+                    matched = bean;
+                }
+                
                 discount = matched.getDiscount();
                 nettotal = matched.getNettotal();
                 refund = matched.getRefund();
