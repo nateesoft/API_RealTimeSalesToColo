@@ -113,6 +113,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             testConn.open();
             return testConn.getConnection() != null;
         } finally {
+            testConn.close();
         }
     }
 
@@ -358,7 +359,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }//GEN-LAST:event_btnStatus2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        scheduler.shutdown();
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
         System.exit(0);
     }//GEN-LAST:event_jButton1ActionPerformed
 
@@ -366,6 +369,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private final ServerSTCardControl serverSTCardControl = new ServerSTCardControl();
 
     private void uploadStcard() {
+        if (branchBean == null) {
+            return;
+        }
         // prepare stcard to send data
         List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
         if (listSTCardNotSend.isEmpty()) {
@@ -486,7 +492,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             dialog.addWindowListener(new java.awt.event.WindowAdapter() {
                 @Override
                 public void windowClosing(java.awt.event.WindowEvent e) {
-                    dialog.scheduler.shutdown();
+                    if (dialog.scheduler != null) {
+                        dialog.scheduler.shutdown();
+                    }
                     System.exit(0);
                 }
             });
@@ -584,31 +592,31 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 1);
+            r_newTime = formatTimeMinus(hh, mm, ss, 1);
             beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 2);
+            r_newTime = formatTimeMinus(hh, mm, ss, 2);
             beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 3);
+            r_newTime = formatTimeMinus(hh, mm, ss, 3);
             beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 4);
+            r_newTime = formatTimeMinus(hh, mm, ss, 4);
             beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 5);
+            r_newTime = formatTimeMinus(hh, mm, ss, 5);
             beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
         }
 
@@ -698,31 +706,31 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 return beanMapping;
             }
 
-            String r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 1);
+            String r_newTime = formatTimeMinus(hh, mm, ss, 1);
             beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 2);
+            r_newTime = formatTimeMinus(hh, mm, ss, 2);
             beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 3);
+            r_newTime = formatTimeMinus(hh, mm, ss, 3);
             beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 4);
+            r_newTime = formatTimeMinus(hh, mm, ss, 4);
             beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss - 5);
+            r_newTime = formatTimeMinus(hh, mm, ss, 5);
             beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
         }
 
@@ -735,5 +743,19 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private String getCurrentTime() {
         return dateConvert.GetCurrentTime();
+    }
+
+    /**
+     * คำนวณ time string โดยลบ steps วินาทีจาก hh:mm:ss พร้อม wrap-around
+     */
+    private String formatTimeMinus(int hh, int mm, int ss, int steps) {
+        int totalSeconds = hh * 3600 + mm * 60 + ss - steps;
+        if (totalSeconds < 0) {
+            totalSeconds += 86400;
+        }
+        int nh = totalSeconds / 3600;
+        int nm = (totalSeconds % 3600) / 60;
+        int ns = totalSeconds % 60;
+        return intFM.format(nh) + ":" + intFM.format(nm) + ":" + intFM.format(ns);
     }
 }
