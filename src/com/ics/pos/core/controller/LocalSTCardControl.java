@@ -19,8 +19,9 @@ public class LocalSTCardControl {
             mysqlLocal.open();
             String sql = "select * from stcard "
                     + "where s_send <> 'Y' "
-                    + "and Source_Data <> 'WEB' "
-                    + "order by s_date, s_no, s_pcode, s_entrytime";
+                    + "and s_rem<>'SAL' "
+//                    + "and Source_Data <> 'WEB' "
+                    + "order by s_date, s_no, s_pcode, s_entrytime limit 20000";
             PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
             try (ResultSet rs = psmtQuery.executeQuery()) {
                 while (rs.next()) {

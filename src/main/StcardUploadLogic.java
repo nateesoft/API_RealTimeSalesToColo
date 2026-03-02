@@ -58,7 +58,7 @@ class StcardUploadLogic {
         String emp = "";
 
         String checkFirstDigitSNo = bean.getS_No().substring(0, 1);
-
+        System.out.println("MatchDiscountStrategy");
         if (bean.getS_Rem().equals(S_REM_SAL)) {
             if (checkFirstDigitSNo.equals("E")) {
                 nettotal = bean.getS_OutCost();

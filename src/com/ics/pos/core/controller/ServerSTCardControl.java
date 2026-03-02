@@ -66,6 +66,7 @@ public class ServerSTCardControl {
             int chunkStart = 0;
 
             for (int i = 0; i < params.size(); i++) {
+                System.out.println("into SaveSTCardBatch");
                 STCardUploadParam p = params.get(i);
                 STCardBean bean = p.bean;
                 pstmt.setString(1, bean.getS_Date());

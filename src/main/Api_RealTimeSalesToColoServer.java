@@ -12,6 +12,10 @@ import com.ics.pos.core.controller.ServerPosHwSetupControl;
 import com.ics.pos.core.controller.ServerSTCardControl;
 import com.ics.pos.core.controller.ServerStkFileControl;
 import com.ics.pos.core.controller.LocalTSaleControl;
+import database.MySQLConnect;
+import database.MySQLConnectWebOnline;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -22,11 +26,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JFrame;
+import util.AppLogUtil;
 import util.DateConvert;
+import util.MSG;
 
 /**
  *
- * @author Dell
+ * @author Delllist
  */
 public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
@@ -50,11 +56,12 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         btnStatus.setText("รอการเชื่อมต่อ...");
 
         startConnectionCheck();
+
     }
 
     /**
-     * ตรวจสอบการเชื่อมต่อ MySQL ทั้ง Local และ Web ก่อนเริ่มระบบ
-     * Retry ทุก 5 วินาที จนกว่าจะ connect ได้ทั้งคู่
+     * ตรวจสอบการเชื่อมต่อ MySQL ทั้ง Local และ Web ก่อนเริ่มระบบ Retry ทุก 5
+     * วินาที จนกว่าจะ connect ได้ทั้งคู่
      */
     private void startConnectionCheck() {
         new Thread(() -> {
@@ -62,8 +69,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             while (true) {
                 attempt++;
                 final int currentAttempt = attempt;
-                javax.swing.SwingUtilities.invokeLater(() ->
-                    btnStatus.setText("ตรวจสอบ MySQL... ครั้งที่ " + currentAttempt)
+                javax.swing.SwingUtilities.invokeLater(()
+                        -> btnStatus.setText("ตรวจสอบ MySQL... ครั้งที่ " + currentAttempt)
                 );
 
                 boolean localOk = testLocalConnection();
@@ -86,15 +93,19 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                             lblBranch.setText("ไม่พบข้อมูลสาขา");
                             btnStatus.setText("เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา");
                         }
+                        getTransection("T_Sale");
+                        uploadUpdateVoid();
+
+                        getTransection("S_Tran");
                         initializeAndStartScheduler();
                     });
                     break;
                 }
 
-                javax.swing.SwingUtilities.invokeLater(() ->
-                    btnStatus.setText("Local: " + (localStatus ? "OK" : "FAIL")
-                            + " | Web: " + (webStatus ? "OK" : "FAIL")
-                            + " | Retry in 5s...")
+                javax.swing.SwingUtilities.invokeLater(()
+                        -> btnStatus.setText("Local: " + (localStatus ? "OK" : "FAIL")
+                                + " | Web: " + (webStatus ? "OK" : "FAIL")
+                                + " | Retry in 5s...")
                 );
 
                 try {
@@ -105,6 +116,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 }
             }
         }, "MySQL-ConnectionCheck").start();
+
     }
 
     private boolean testLocalConnection() {
@@ -136,8 +148,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         // Task ที่จะ run ทุกๆ 5 นาที
         Runnable uploadTask = () -> {
+            txtLogMSG.setText("กำลังเข้าสู่ ลูบ การส่งข้อมูลครับ 5 นาที");
             try {
                 System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
+
                 uploadStcard();
                 javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
                 System.out.println("=== Scheduled upload completed ===");
@@ -160,7 +174,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         jToggleButton1 = new javax.swing.JToggleButton();
         jLabel1 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
-        txtLogErr = new javax.swing.JTextArea();
+        txtLogMSG = new javax.swing.JTextArea();
         jLabel2 = new javax.swing.JLabel();
         jToggleButton2 = new javax.swing.JToggleButton();
         btnStatus = new javax.swing.JToggleButton();
@@ -196,11 +210,11 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 102, 0));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("API-AutoSales Online V5.14 2026022/17:14");
+        jLabel1.setText("API-AutoSales Online V7.1 20260302/14:41");
 
-        txtLogErr.setColumns(20);
-        txtLogErr.setRows(5);
-        jScrollPane1.setViewportView(txtLogErr);
+        txtLogMSG.setColumns(20);
+        txtLogMSG.setRows(5);
+        jScrollPane1.setViewportView(txtLogMSG);
 
         jLabel2.setFont(new java.awt.Font("Tahoma", 1, 14)); // NOI18N
         jLabel2.setForeground(new java.awt.Color(255, 102, 0));
@@ -256,7 +270,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         lblDisplayStcard1.setText("DisplaySTKFile");
 
-        jButton2.setFont(new java.awt.Font("Angsana New", 0, 36)); // NOI18N
+        jButton2.setFont(new java.awt.Font("Angsana New", 0, 18)); // NOI18N
         jButton2.setText("เอกสารแก้ไข จากสำนักงานใหญ่");
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -266,7 +280,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             .addComponent(btnUpload, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, 413, Short.MAX_VALUE)
+                .addComponent(jLabel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jToggleButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -318,10 +332,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(10, 10, 10)
                 .addComponent(pbCheckUpdate, javax.swing.GroupLayout.PREFERRED_SIZE, 20, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 17, Short.MAX_VALUE)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(btnStatus1, javax.swing.GroupLayout.PREFERRED_SIZE, 49, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(lblDisplayStcard1, javax.swing.GroupLayout.DEFAULT_SIZE, 53, Short.MAX_VALUE))
+                    .addComponent(lblDisplayStcard1, javax.swing.GroupLayout.DEFAULT_SIZE, 60, Short.MAX_VALUE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(btnStatus2, javax.swing.GroupLayout.PREFERRED_SIZE, 53, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -332,7 +346,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 .addComponent(jButton2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 5, Short.MAX_VALUE))
+                .addGap(0, 14, Short.MAX_VALUE))
         );
 
         pack();
@@ -378,15 +392,15 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setEnabled(true));
             return;
         }
-        
+
         // update last refno
         uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
 
         // Phase 1: compute all values and collect valid items for batch insert
         List<ServerSTCardControl.STCardUploadParam> batchParams = new ArrayList<>();
         for (STCardBean stCardNotSend : listSTCardNotSend) {
-            StcardUploadLogic.ComputedParams params =
-                    StcardUploadLogic.computeParams(stCardNotSend, this::matchDiscount);
+            StcardUploadLogic.ComputedParams params
+                    = StcardUploadLogic.computeParams(stCardNotSend, this::matchDiscount);
 
             if (params.shouldSkip) {
                 continue;
@@ -407,6 +421,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 if (p.isSalType) {
                     // update flag local
                     localStCard.updateSendStatus(p.bean, getCurrentDate(), getCurrentTime());
+                    uploadStkfile(p.bean.getS_PCode());
                 } else {
                     // update flag local
                     localStCard.updateSendStatusDone(p.bean, getCurrentDate(), getCurrentTime());
@@ -423,6 +438,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private final ServerStkFileControl serverStkFileControl = new ServerStkFileControl();
 
     private void uploadStkfile(String bpcode) {
+        loadStatus();
+        txtSql.setText("STKFILE Upload Process");
         if (bpcode != null && !bpcode.equals("")) {
 
             STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
@@ -486,6 +503,182 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
     }
 
+    private void getTransection(String table) {
+        MySQLConnect mysqlLocal1 = new MySQLConnect();
+        mysqlLocal1.open();
+        try {
+            String sql = "select * from " + table + " where r_send='N' order by r_refno,r_index;";
+            ResultSet rs = mysqlLocal1.getConnection().createStatement().executeQuery(sql);
+            ArrayList<STCardBean> listBean = new ArrayList();
+            int size = 0;
+            size = listBean.size();
+            while (rs.next()) {
+                STCardBean bean = new STCardBean();
+                bean.setS_Date(rs.getString("R_Date"));
+                bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
+                bean.setS_Que(0);
+                bean.setS_PCode(rs.getString("R_Plucode"));
+                bean.setS_Stk("A1");
+                bean.setS_In(0);
+                bean.setS_Out(rs.getInt("R_Quan"));
+                bean.setS_InCost(0);
+                bean.setS_OutCost(rs.getInt("R_Total"));
+                bean.setS_ACost(0);
+                bean.setS_Rem("SAL");
+                bean.setS_User(rs.getString("Cashier"));
+                bean.setS_EntryDate(rs.getString("R_Date"));
+                bean.setR_time(rs.getString("R_time"));
+                bean.setS_Link("");
+                bean.setSource_Data("POS");
+                bean.setDataSync("N");
+                double discount = 0;
+                discount = rs.getDouble("R_Nettotal") - rs.getDouble("R_Total");
+                if (discount < -1) {
+                    discount = discount * -1;
+                }
+                bean.setDiscount(discount);
+                bean.setNettotal(rs.getDouble("R_Nettotal"));
+                bean.setRefund(rs.getString("R_Refund"));
+                bean.setRefNo(rs.getString("R_Refno"));
+                bean.setCashier(rs.getString("Cashier"));
+                bean.setEmp(rs.getString("R_Emp"));
+                bean.setUnitPrice(rs.getDouble("R_Price"));
+                bean.setR_index(rs.getString("R_Index"));
+                bean.setS_EntryDate(rs.getString("R_Date"));
+                bean.setS_EntryTime(rs.getString("R_Time"));
+                listBean.add(bean);
+                size--;
+                txtLogMSG.setText("Processing GetTraansection Local" + "' / " + listBean.size() + "' : " + size);
+
+            }
+            uploadTranSection(listBean, table);
+            rs.close();
+        } catch (Exception e) {
+            AppLogUtil.log(this.getClass(), "error", e);
+            e.printStackTrace();
+        } finally {
+            mysqlLocal1.close();
+        }
+    }
+
+    private void uploadTranSection(ArrayList<STCardBean> listBean, String table) {
+        MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
+        MySQLConnect mysqlLocal = new MySQLConnect();
+        try {
+            mysqlServer.open();
+            mysqlLocal.open();
+            if (listBean.size() > 0) {
+                for (int i = 0; i < listBean.size(); i++) {
+                    loadStatus();
+                    txtSql.setText("กำสังส่งข้อมูล สินค้า" + table + " รหัส " + listBean.get(i).getS_PCode() + "ลำดับที่ " + i + " ไปยัง server");
+                    String sql = "insert into stcard ("
+                            + "s_date, s_no, s_subNo, s_Que, s_pcode,"
+                            + " s_stk, s_in, s_out, s_incost, s_outcost,"
+                            + " s_acost, s_rem, s_user, s_entrydate, s_entrytime,"
+                            + " s_link, s_bran, data_Sync, Source_data, Discount, "
+                            + "Nettotal, Refund, Refno, Cashier, EMP, "
+                            + "UnitPrice, R_index) "
+                            + "Values("
+                            + "'" + listBean.get(i).getS_Date() + "','" + listBean.get(i).getS_No() + "','','0','" + listBean.get(i).getS_PCode() + "',"
+                            + "'" + listBean.get(i).getS_Stk() + "','0','" + listBean.get(i).getS_Out() + "','0','" + listBean.get(i).getS_OutCost() + "',"
+                            + "'0','" + listBean.get(i).getS_Rem() + "','" + listBean.get(i).getS_User() + "','" + listBean.get(i).getS_EntryDate() + "','" + listBean.get(i).getS_EntryTime() + "',"
+                            + "'N','" + branchBean.getCode() + "','N','POS','" + listBean.get(i).getDiscount() + "',"
+                            + "'" + listBean.get(i).getNettotal() + "','" + listBean.get(i).getRefund() + "','" + listBean.get(i).getRefNo() + "','" + listBean.get(i).getCashier() + "','" + listBean.get(i).getEmp() + "',"
+                            + "'" + listBean.get(i).getUnitPrice() + "','" + listBean.get(i).getR_index() + "'"
+                            + ");";
+                    mysqlServer.getConnection().createStatement().executeUpdate(sql);
+                    String sqlLocal = "update " + table + " set r_send='Y' "
+                            + "where "
+                            + "r_refno='" + listBean.get(i).getRefNo() + "' "
+                            + "and r_index='" + listBean.get(i).getR_index() + "' "
+                            + "and r_plucode='" + listBean.get(i).getS_PCode() + "' "
+                            + "and r_date='" + listBean.get(i).getS_Date() + "' "
+                            + "and r_time='" + listBean.get(i).getS_EntryTime() + "' "
+                            + "and r_emp='" + listBean.get(i).getEmp() + "'"
+                            + "and r_refund='" + listBean.get(i).getRefund() + "' ;";
+                    mysqlLocal.getConnection().createStatement().executeUpdate(sqlLocal);
+                }
+
+                for (int i = 0; i < listBean.size(); i++) {
+                    uploadStkfile(listBean.get(i).getS_PCode());
+                }
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            AppLogUtil.log(this.getClass(), "error", e);
+        } finally {
+            mysqlServer.close();
+            mysqlLocal.close();
+        }
+
+    }
+
+    private void uploadUpdateVoid() {
+        MySQLConnect mysqlLocal = new MySQLConnect();
+        MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
+        try {
+            mysqlLocal.open();
+            mysqlServer.open();
+
+            String sql = "select * from t_sale where r_refund='V' limit 250;";
+            ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql);
+            ArrayList<STCardBean> listBean = new ArrayList();
+            while (rs.next()) {
+                loadStatus();
+                STCardBean bean = new STCardBean();
+                bean.setS_Date(rs.getString("R_Date"));
+                bean.setS_PCode(rs.getString("R_Plucode"));
+                bean.setS_Stk("A1");
+                bean.setS_Out(rs.getInt("R_Quan"));
+                bean.setS_OutCost(rs.getInt("R_Total"));
+                bean.setS_Rem("SAL");
+                bean.setS_User(rs.getString("Cashier"));
+                bean.setS_EntryDate(rs.getString("R_Date"));
+                bean.setR_time(rs.getString("R_time"));
+                bean.setNettotal(rs.getDouble("R_Nettotal"));
+                bean.setRefund(rs.getString("R_Refund"));
+                bean.setRefNo(rs.getString("R_Refno"));
+                bean.setCashier(rs.getString("Cashier"));
+                bean.setEmp(rs.getString("R_Emp"));
+                bean.setUnitPrice(rs.getDouble("R_Price"));
+                bean.setR_index(rs.getString("R_Index"));
+                bean.setS_EntryDate(rs.getString("R_Date"));
+                bean.setS_EntryTime(rs.getString("R_Time"));
+
+                listBean.add(bean);
+            }
+
+            for (int i = 0; i < listBean.size(); i++) {
+                txtSql.setText("Processing Upload Void='V' item " + listBean.get(i).getS_PCode());
+                String sqlRefund = "update stcard set "
+                        + "refund='" + listBean.get(i).getRefund() + "' "
+                        + "where "
+                        + "refno='" + listBean.get(i).getRefNo() + "' "
+                        + "and r_index='" + listBean.get(i).getR_index() + "' "
+                        + "and s_pcode='" + listBean.get(i).getS_PCode() + "' "
+                        + "and s_entrydate='" + listBean.get(i).getS_EntryDate() + "' "
+                        + "and s_entrytime='" + listBean.get(i).getS_EntryTime() + "' "
+                        + "and s_out ='" + listBean.get(i).getS_Out() + "' "
+                        + "and emp='" + listBean.get(i).getEmp() + "' "
+                        + "and cashier='" + listBean.get(i).getCashier() + "' "
+                        + "and s_date='" + listBean.get(i).getS_Date() + "' "
+                        + "and refund<>'V' ";
+                mysqlServer.getConnection().createStatement().executeUpdate(sqlRefund);
+                uploadStkfile(listBean.get(i).getS_PCode());
+            }
+            rs.close();
+
+        } catch (Exception e) {
+            AppLogUtil.log(this.getClass(), "error", e);
+            e.printStackTrace();
+        } finally {
+            mysqlLocal.close();
+            mysqlServer.close();
+        }
+    }
+
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(() -> {
             Api_RealTimeSalesToColoServer dialog = new Api_RealTimeSalesToColoServer();
@@ -501,6 +694,33 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             dialog.setVisible(true);
         });
     }
+
+    public void loadStatus() {
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                //check ftp file date
+                try {
+                    pbCheckUpdate.setStringPainted(true);
+                    pbCheckUpdate.setMinimum(0);
+                    pbCheckUpdate.setMaximum(100);
+                    for (int i = 1; i <= 100; i++) {
+                        pbCheckUpdate.setValue(i);
+                        pbCheckUpdate.setString("LOADDING Data: (" + i + " %)");
+                        try {
+                            Thread.sleep(25);
+                        } catch (Exception e) {
+                        }
+                    }
+
+                    pbCheckUpdate.setString("Load data Complete ");
+                } catch (Exception e) {
+                }
+            }
+        }).start();
+    }
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JToggleButton btnStatus;
@@ -519,7 +739,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private javax.swing.JLabel lblDisplayStcard;
     private javax.swing.JLabel lblDisplayStcard1;
     private javax.swing.JProgressBar pbCheckUpdate;
-    private javax.swing.JTextArea txtLogErr;
+    private javax.swing.JTextArea txtLogMSG;
     private javax.swing.JTextArea txtSql;
     // End of variables declaration//GEN-END:variables
 
@@ -544,11 +764,11 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
             macno = strs[0];
             //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
-            if(s_No.length() == 14) {
+            if (s_No.length() == 14) {
                 String chkSNO = s_No.substring(3, 6);
-                if(chkSNO.equals("-1-")||chkSNO.equals("-2-")||chkSNO.equals("-3-")||chkSNO.equals("-4-")
-                        ||chkSNO.equals("-5-")||chkSNO.equals("-6-")||chkSNO.equals("-7-")
-                        ||chkSNO.equals("-8-")||chkSNO.equals("-9-")) {
+                if (chkSNO.equals("-1-") || chkSNO.equals("-2-") || chkSNO.equals("-3-") || chkSNO.equals("-4-")
+                        || chkSNO.equals("-5-") || chkSNO.equals("-6-") || chkSNO.equals("-7-")
+                        || chkSNO.equals("-8-") || chkSNO.equals("-9-")) {
                     r_time = strs[2];
                 } else {
                     r_time = strs[1];
@@ -624,6 +844,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }
 
     private final LocalSTranControl localStranControl = new LocalSTranControl();
+
     private STCardBean processNotCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode,
             String s_Date, double s_out, double s_outCost) throws SQLException {
         DecimalFormat df = new DecimalFormat("#0");
@@ -678,7 +899,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 r_time = strsTime[1];
             }
 
-            String []strTimes = r_time.split(":");
+            String[] strTimes = r_time.split(":");
             int hh = Integer.parseInt(strTimes[0]);
             int mm = Integer.parseInt(strTimes[1]);
             int ss = Integer.parseInt(strTimes[2]);
