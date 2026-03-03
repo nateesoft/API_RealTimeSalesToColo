@@ -14,7 +14,6 @@ import com.ics.pos.core.controller.ServerStkFileControl;
 import com.ics.pos.core.controller.LocalTSaleControl;
 import database.MySQLConnect;
 import database.MySQLConnectWebOnline;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
@@ -28,7 +27,6 @@ import java.util.logging.Logger;
 import javax.swing.JFrame;
 import util.AppLogUtil;
 import util.DateConvert;
-import util.MSG;
 
 /**
  *
@@ -93,10 +91,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                             lblBranch.setText("ไม่พบข้อมูลสาขา");
                             btnStatus.setText("เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา");
                         }
-                        getTransection("T_Sale");
-                        uploadUpdateVoid();
-
-                        getTransection("S_Tran");
+                        
                         initializeAndStartScheduler();
                     });
                     break;
@@ -152,6 +147,12 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             try {
                 System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
 
+                // before update stcard
+                getTransectionTSale();
+                uploadUpdateVoid();
+                getTransectionSTran();
+                
+                // upate stcard
                 uploadStcard();
                 javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
                 System.out.println("=== Scheduled upload completed ===");
@@ -502,72 +503,34 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             poshwServerControl.updateTime(receNo1, currentDate, currentTime, terminal, branchCode);
         }
     }
-
-    private void getTransection(String table) {
-        MySQLConnect mysqlLocal1 = new MySQLConnect();
-        mysqlLocal1.open();
-        try {
-            String sql = "select * from " + table + " where r_send='N' order by r_refno,r_index;";
-            ResultSet rs = mysqlLocal1.getConnection().createStatement().executeQuery(sql);
-            ArrayList<STCardBean> listBean = new ArrayList();
-            int size = 0;
-            size = listBean.size();
-            while (rs.next()) {
-                STCardBean bean = new STCardBean();
-                bean.setS_Date(rs.getString("R_Date"));
-                bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
-                bean.setS_Que(0);
-                bean.setS_PCode(rs.getString("R_Plucode"));
-                bean.setS_Stk("A1");
-                bean.setS_In(0);
-                bean.setS_Out(rs.getInt("R_Quan"));
-                bean.setS_InCost(0);
-                bean.setS_OutCost(rs.getInt("R_Total"));
-                bean.setS_ACost(0);
-                bean.setS_Rem("SAL");
-                bean.setS_User(rs.getString("Cashier"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setR_time(rs.getString("R_time"));
-                bean.setS_Link("");
-                bean.setSource_Data("POS");
-                bean.setDataSync("N");
-                double discount = 0;
-                discount = rs.getDouble("R_Nettotal") - rs.getDouble("R_Total");
-                if (discount < -1) {
-                    discount = discount * -1;
-                }
-                bean.setDiscount(discount);
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                bean.setUnitPrice(rs.getDouble("R_Price"));
-                bean.setR_index(rs.getString("R_Index"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setS_EntryTime(rs.getString("R_Time"));
-                listBean.add(bean);
-                size--;
-                txtLogMSG.setText("Processing GetTraansection Local" + "' / " + listBean.size() + "' : " + size);
-
-            }
-            uploadTranSection(listBean, table);
-            rs.close();
-        } catch (Exception e) {
-            AppLogUtil.log(this.getClass(), "error", e);
-            e.printStackTrace();
-        } finally {
-            mysqlLocal1.close();
+    
+    private void getTransectionTSale() {
+        List<STCardBean> listBean = localTSaleControl.getTransaction();
+        int size = listBean.size();
+        for(STCardBean bean: listBean) {
+            size--;
+            txtLogMSG.setText("Processing Local ("+bean.getS_PCode()+")" + "' / " + listBean.size() + "' : " + size);
         }
+        uploadTranSection(listBean, "t_sale");
+    }
+    
+    private void getTransectionSTran() {
+        List<STCardBean> listBean = localStranControl.getTransaction();
+        int size = listBean.size();
+        for(STCardBean bean: listBean) {
+            size--;
+            txtLogMSG.setText("Processing Local ("+bean.getS_PCode()+")" + "' / " + listBean.size() + "' : " + size);
+        }
+        uploadTranSection(listBean, "s_tran");
     }
 
-    private void uploadTranSection(ArrayList<STCardBean> listBean, String table) {
+    private void uploadTranSection(List<STCardBean> listBean, String table) {
         MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
         MySQLConnect mysqlLocal = new MySQLConnect();
         try {
             mysqlServer.open();
             mysqlLocal.open();
-            if (listBean.size() > 0) {
+            if (!listBean.isEmpty()) {
                 for (int i = 0; i < listBean.size(); i++) {
                     loadStatus();
                     txtSql.setText("กำสังส่งข้อมูล สินค้า" + table + " รหัส " + listBean.get(i).getS_PCode() + "ลำดับที่ " + i + " ไปยัง server");
@@ -743,7 +706,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private javax.swing.JTextArea txtSql;
     // End of variables declaration//GEN-END:variables
 
-    private final LocalTSaleControl tSaleControl = new LocalTSaleControl();
+    private final LocalTSaleControl localTSaleControl = new LocalTSaleControl();
     private final DecimalFormat intFM = new DecimalFormat("00");
 
     private STCardBean processCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode,
@@ -756,7 +719,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             macno = s_No.substring(2, 5);
             String[] strs1 = s_No.split("/");
             refno = strs1[1];
-            beanMapping = tSaleControl.getDataByMacNoRefNoPluCodeFlagRVoid(macno, refno, s_PCode, s_Date, bean.getR_time());
+            beanMapping = localTSaleControl.getDataByMacNoRefNoPluCodeFlagRVoid(macno, refno, s_PCode, s_Date, bean.getR_time());
         } else {
             //เป็นบิลปกติ ไม่ได้ยกเลิก
             String[] strs = s_No.split("-");
@@ -777,7 +740,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 r_time = strs[1];
             }
 
-            beanMapping = tSaleControl.getDataByPluCodeRdateRTimeRVoid(s_PCode, s_Date, r_time);
+            beanMapping = localTSaleControl.getDataByPluCodeRdateRTimeRVoid(s_PCode, s_Date, r_time);
             if (beanMapping != null) {
                 return beanMapping;
             }
@@ -802,10 +765,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     hh = hh - 1;
                 }
                 r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
-                beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, true);
+                beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, true);
             } else {
                 //ถ้าไม่ใช่การยกเลิกบิล
-                beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+                beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             }
 
             if (beanMapping != null) {
@@ -813,31 +776,31 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             }
 
             r_newTime = formatTimeMinus(hh, mm, ss, 1);
-            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = formatTimeMinus(hh, mm, ss, 2);
-            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = formatTimeMinus(hh, mm, ss, 3);
-            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = formatTimeMinus(hh, mm, ss, 4);
-            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
             if (beanMapping != null) {
                 return beanMapping;
             }
 
             r_newTime = formatTimeMinus(hh, mm, ss, 5);
-            beanMapping = tSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
         }
 
         return beanMapping;
