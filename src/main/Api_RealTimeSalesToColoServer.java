@@ -544,12 +544,25 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 String sqlUpdate = "UPDATE " + table + " SET r_send='Y'"
                         + " WHERE r_refno=? AND r_index=? AND r_plucode=?"
                         + " AND r_date=? AND r_time=? AND r_emp=? AND r_refund=?";
+                final int totalItems = listBean.size();
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    pbCheckUpdate.setStringPainted(true);
+                    pbCheckUpdate.setMinimum(0);
+                    pbCheckUpdate.setMaximum(totalItems);
+                    pbCheckUpdate.setValue(0);
+                    pbCheckUpdate.setString("เริ่มส่งข้อมูล " + table + " ...");
+                });
                 try (PreparedStatement psInsert = mysqlServer.getConnection().prepareStatement(sqlInsert);
                      PreparedStatement psUpdate = mysqlLocal.getConnection().prepareStatement(sqlUpdate)) {
                     for (int i = 0; i < listBean.size(); i++) {
                         STCardBean b = listBean.get(i);
-                        final String sqlMsg = "กำลังส่งข้อมูล สินค้า" + table + " รหัส " + b.getS_PCode() + " ลำดับที่ " + i + " ไปยัง server";
-                        javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText(sqlMsg));
+                        final int current = i + 1;
+                        final String sqlMsg = "กำลังส่งข้อมูล " + table + " รหัส " + b.getS_PCode() + " ลำดับที่ " + current + "/" + totalItems;
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            txtSql.setText(sqlMsg);
+                            pbCheckUpdate.setValue(current);
+                            pbCheckUpdate.setString(current + " / " + totalItems);
+                        });
 
                         psInsert.setString(1, b.getS_Date());
                         psInsert.setString(2, b.getS_No());
@@ -590,6 +603,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                         psUpdate.executeUpdate();
                     }
                 }
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    pbCheckUpdate.setValue(totalItems);
+                    pbCheckUpdate.setString("ส่งข้อมูล " + table + " เสร็จสิ้น (" + totalItems + " รายการ)");
+                });
 
                 for (int i = 0; i < listBean.size(); i++) {
                     uploadStkfile(listBean.get(i).getS_PCode());
@@ -640,6 +657,14 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 listBean.add(bean);
             }
 
+            final int totalVoid = listBean.size();
+            javax.swing.SwingUtilities.invokeLater(() -> {
+                pbCheckUpdate.setStringPainted(true);
+                pbCheckUpdate.setMinimum(0);
+                pbCheckUpdate.setMaximum(totalVoid > 0 ? totalVoid : 1);
+                pbCheckUpdate.setValue(0);
+                pbCheckUpdate.setString("อัพเดต Void (" + totalVoid + " รายการ)");
+            });
             String sqlRefund = "UPDATE stcard SET refund=?"
                     + " WHERE refno=? AND r_index=? AND s_pcode=?"
                     + " AND s_entrydate=? AND s_entrytime=? AND s_out=?"
@@ -647,8 +672,13 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             try (PreparedStatement psRefund = mysqlServer.getConnection().prepareStatement(sqlRefund)) {
                 for (int i = 0; i < listBean.size(); i++) {
                     STCardBean b = listBean.get(i);
-                    final String voidMsg = "Processing Upload Void='V' item " + b.getS_PCode();
-                    javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText(voidMsg));
+                    final int currentVoid = i + 1;
+                    final String voidMsg = "Processing Void='V' " + b.getS_PCode() + " (" + currentVoid + "/" + totalVoid + ")";
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        txtSql.setText(voidMsg);
+                        pbCheckUpdate.setValue(currentVoid);
+                        pbCheckUpdate.setString(currentVoid + " / " + totalVoid);
+                    });
                     psRefund.setString(1, b.getRefund());
                     psRefund.setString(2, b.getRefNo());
                     psRefund.setString(3, b.getR_index());
@@ -662,6 +692,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     psRefund.executeUpdate();
                     uploadStkfile(b.getS_PCode());
                 }
+                javax.swing.SwingUtilities.invokeLater(() -> {
+                    pbCheckUpdate.setValue(totalVoid);
+                    pbCheckUpdate.setString("อัพเดต Void เสร็จสิ้น (" + totalVoid + " รายการ)");
+                });
             }
             rs.close();
 
