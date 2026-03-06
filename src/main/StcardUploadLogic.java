@@ -87,7 +87,10 @@ class StcardUploadLogic {
             } else if (bean.getS_OutCost() != 0) {
                 nettotal = bean.getS_OutCost();
             }
-            refund = "-";
+            refund = bean.getRefund();
+            if(refund.equals(null)||refund.equals("")){
+                refund="-";
+            }
             cashier = bean.getCashier();
             emp = cashier;
         }

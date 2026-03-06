@@ -281,7 +281,7 @@ public class LocalSTranControl {
                 bean.setDataSync("N");
                 double discount = 0;
                 discount = rs.getDouble("R_Nettotal") - rs.getDouble("R_Total");
-                if (discount < -1) {
+                if (discount < 0) {
                     discount = discount * -1;
                 }
                 bean.setDiscount(discount);
@@ -294,6 +294,7 @@ public class LocalSTranControl {
                 bean.setR_index(rs.getString("R_Index"));
                 bean.setS_EntryDate(rs.getString("R_Date"));
                 bean.setS_EntryTime(rs.getString("R_Time"));
+                bean.setS_Stk(rs.getString("STKCode"));
                 
                 listBean.add(bean);
             }

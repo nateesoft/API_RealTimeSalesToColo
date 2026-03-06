@@ -151,7 +151,7 @@
           <Color blue="0" green="66" red="ff" type="rgb"/>
         </Property>
         <Property name="horizontalAlignment" type="int" value="0"/>
-        <Property name="text" type="java.lang.String" value="API-AutoSales Online V7.1 20260302/14:41"/>
+        <Property name="text" type="java.lang.String" value="API-AutoSales Online V7.1 20260304/15:51"/>
       </Properties>
     </Component>
     <Container class="javax.swing.JScrollPane" name="jScrollPane1">

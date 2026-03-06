@@ -11,6 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class LocalSTCardControl {
+
     private final MySQLConnect mysqlLocal = new MySQLConnect();
 
     public List<STCardBean> getListSTCardNotSend() {
@@ -20,8 +21,8 @@ public class LocalSTCardControl {
             String sql = "select * from stcard "
                     + "where s_send <> 'Y' "
                     + "and s_rem<>'SAL' "
-//                    + "and Source_Data <> 'WEB' "
-                    + "order by s_date, s_no, s_pcode, s_entrytime limit 20000";
+                    //                    + "and Source_Data <> 'WEB' "
+                    + "order by s_date, s_no, s_pcode,s_que, s_entrytime";
             PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
             try (ResultSet rs = psmtQuery.executeQuery()) {
                 while (rs.next()) {
@@ -65,7 +66,11 @@ public class LocalSTCardControl {
                     + "where s_pcode=? "
                     + "and s_date=? and s_entrytime=? "
                     + "and s_rem=? and s_user=? "
-                    + "and s_send='N' and s_no=?";
+                    + "and s_send='N' and s_no=?"
+                    + "and s_que=? and s_subno=?"
+                    + "and s_in=? and s_out=?"
+                    + "and s_incost=? and s_outcost=?"
+                    + "and s_user=? and s_rem=?";
             PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
             pstmt.setString(1, lastUpdate);
             pstmt.setString(2, lastTimeUpdate);
@@ -75,6 +80,14 @@ public class LocalSTCardControl {
             pstmt.setString(6, stCardNotSend.getS_Rem());
             pstmt.setString(7, stCardNotSend.getS_User());
             pstmt.setString(8, stCardNotSend.getS_No());
+            pstmt.setInt(9, stCardNotSend.getS_Que());
+            pstmt.setString(10, stCardNotSend.getS_SubNo());
+            pstmt.setDouble(11, stCardNotSend.getS_In());
+            pstmt.setDouble(12, stCardNotSend.getS_Out());
+            pstmt.setDouble(13, stCardNotSend.getS_InCost());
+            pstmt.setDouble(14, stCardNotSend.getS_OutCost());
+            pstmt.setString(15, stCardNotSend.getS_User());
+            pstmt.setString(16, stCardNotSend.getS_Rem());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
