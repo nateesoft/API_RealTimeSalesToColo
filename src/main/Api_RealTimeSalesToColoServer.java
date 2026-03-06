@@ -439,7 +439,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private final ServerStkFileControl serverStkFileControl = new ServerStkFileControl();
 
     private void uploadStkfile(String bpcode) {
-        loadStatus();
         txtSql.setText("STKFILE Upload Process");
         if (bpcode != null && !bpcode.equals("")) {
 
@@ -532,8 +531,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             mysqlLocal.open();
             if (!listBean.isEmpty()) {
                 for (int i = 0; i < listBean.size(); i++) {
-                    loadStatus();
-                    txtSql.setText("กำสังส่งข้อมูล สินค้า" + table + " รหัส " + listBean.get(i).getS_PCode() + "ลำดับที่ " + i + " ไปยัง server");
+                    txtSql.setText("กำลังส่งข้อมูล สินค้า" + table + " รหัส " + listBean.get(i).getS_PCode() + "ลำดับที่ " + i + " ไปยัง server");
                     String sql = "insert into stcard ("
                             + "s_date, s_no, s_subNo, s_Que, s_pcode,"
                             + " s_stk, s_in, s_out, s_incost, s_outcost,"
@@ -589,7 +587,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql);
             ArrayList<STCardBean> listBean = new ArrayList();
             while (rs.next()) {
-                loadStatus();
                 STCardBean bean = new STCardBean();
                 bean.setS_Date(rs.getString("R_Date"));
                 bean.setS_PCode(rs.getString("R_Plucode"));
@@ -607,7 +604,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 bean.setEmp(rs.getString("R_Emp"));
                 bean.setUnitPrice(rs.getDouble("R_Price"));
                 bean.setR_index(rs.getString("R_Index"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
                 bean.setS_EntryTime(rs.getString("R_Time"));
 
                 listBean.add(bean);
@@ -656,32 +652,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             });
             dialog.setVisible(true);
         });
-    }
-
-    public void loadStatus() {
-        new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                //check ftp file date
-                try {
-                    pbCheckUpdate.setStringPainted(true);
-                    pbCheckUpdate.setMinimum(0);
-                    pbCheckUpdate.setMaximum(100);
-                    for (int i = 1; i <= 100; i++) {
-                        pbCheckUpdate.setValue(i);
-                        pbCheckUpdate.setString("LOADDING Data: (" + i + " %)");
-                        try {
-                            Thread.sleep(25);
-                        } catch (Exception e) {
-                        }
-                    }
-
-                    pbCheckUpdate.setString("Load data Complete ");
-                } catch (Exception e) {
-                }
-            }
-        }).start();
     }
 
 
@@ -748,28 +718,22 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             int hh = 0;
             int mm = 0;
             int ss = 0;
-            String r_newTime = "";
-
-            //ถ้าเป็นยกเลิกบิล
-            if (!checkFirstDigitSNo.equals("R")) {
-                hh = Integer.parseInt(r_time.substring(0, 2));
-                mm = Integer.parseInt(r_time.substring(3, 5));
-                ss = Integer.parseInt(r_time.substring(6, 8));
-                ss = ss - 1;
-                if (ss == -1) {
-                    ss = 59;
-                    mm = mm - 1;
-                }
-                if (mm == -1) {
-                    mm = 59;
-                    hh = hh - 1;
-                }
-                r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
-                beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, true);
-            } else {
-                //ถ้าไม่ใช่การยกเลิกบิล
-                beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
+            String r_newTime;
+            hh = Integer.parseInt(r_time.substring(0, 2));
+            mm = Integer.parseInt(r_time.substring(3, 5));
+            ss = Integer.parseInt(r_time.substring(6, 8));
+            ss = ss - 1;
+            if (ss == -1) {
+                ss = 59;
+                mm = mm - 1;
             }
+            if (mm == -1) {
+                mm = 59;
+                hh = hh - 1;
+            }
+            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
+            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, true);
+
 
             if (beanMapping != null) {
                 return beanMapping;
