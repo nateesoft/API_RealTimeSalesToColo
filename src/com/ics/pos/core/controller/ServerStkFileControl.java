@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ServerStkFileControl {
+
     private final MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
 
     public STKFileBean getDataByBPCodeBranchCode(String bpCode, String branchCode) {
@@ -57,6 +58,8 @@ public class ServerStkFileControl {
                     bean.setbQty23(rs.getDouble("BQty23"));
                     bean.setbQty24(rs.getDouble("BQty24"));
                     bean.setBranch(rs.getString("Branch"));
+                } else {
+                    bean = null;
                 }
             }
         } catch (SQLException e) {
@@ -72,10 +75,11 @@ public class ServerStkFileControl {
         STKFileBean stkFileBean = null;
         try {
             mysqlServer.open();
-            String sql = "insert ignore into stkfile (bpcode, branch) values(?, ?)";
+            String sql = "insert ignore stkfile (bpcode,bstk, branch) values(?, ?, ?)";
             PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
             pstmt.setString(1, bpCode);
-            pstmt.setString(2, branchCode);
+            pstmt.setString(2, stockCode);
+            pstmt.setString(3, branchCode);
             if (pstmt.executeUpdate() > 0) {
                 stkFileBean = new STKFileBean();
                 stkFileBean.setbPcode(bpCode);
@@ -109,6 +113,7 @@ public class ServerStkFileControl {
                 stkFileBean.setbQty23(0);
                 stkFileBean.setbQty24(0);
                 stkFileBean.setBranch(branchCode);
+                System.err.println("Save New Stkfle : bpcode = " + stkFileBean.getbPcode() + " And Branch = " + stkFileBean.getBranch());
             }
         } catch (SQLException ex) {
             Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
@@ -166,6 +171,7 @@ public class ServerStkFileControl {
             pstmt.setString(32, stkFileBean.getbPcode());
             pstmt.setString(33, stkFileBean.getBranch());
             pstmt.executeUpdate();
+            System.out.println("Processing UIpdate stkfile bpcode : " + stkFileBean.getbPcode());
         } catch (SQLException ex) {
             Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {

@@ -151,7 +151,7 @@
           <Color blue="0" green="66" red="ff" type="rgb"/>
         </Property>
         <Property name="horizontalAlignment" type="int" value="0"/>
-        <Property name="text" type="java.lang.String" value="API-AutoSales Online V7.1 20260304/15:51"/>
+        <Property name="text" type="java.lang.String" value="API-AutoSales Online V8.0 20260427/1824"/>
       </Properties>
     </Component>
     <Container class="javax.swing.JScrollPane" name="jScrollPane1">
@@ -281,6 +281,9 @@
         </Property>
         <Property name="text" type="java.lang.String" value="&#xe40;&#xe2d;&#xe01;&#xe2a;&#xe32;&#xe23;&#xe41;&#xe01;&#xe49;&#xe44;&#xe02; &#xe08;&#xe32;&#xe01;&#xe2a;&#xe33;&#xe19;&#xe31;&#xe01;&#xe07;&#xe32;&#xe19;&#xe43;&#xe2b;&#xe0d;&#xe48;"/>
       </Properties>
+      <Events>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton2ActionPerformed"/>
+      </Events>
     </Component>
   </SubComponents>
 </Form>
