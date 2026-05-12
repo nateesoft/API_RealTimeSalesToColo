@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.ics.pos.core.controller;
 
 import com.ics.bean.STCardBean;
@@ -13,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import util.AppLogUtil;
 
 /**
  *
@@ -29,13 +24,13 @@ public class LocalTSaleControl {
 
         try {
             mysqlLocal.open();
-            String sql = "select r_refno, R_Total, r_nettotal R_Nettotal, r_pramt, r_discbath"
-                    + " r_refno, r_refund, cashier Cashier, r_emp R_Emp,r_time,r_void "
-                    + "from t_sale "
-                    + "where macno=? and r_refno=? "
-                    + "and r_plucode=? and r_date=? "
-                    + "and r_time=? "
-                    + "and r_void='V' limit 1;";
+            String sql = "SELECT r_refno, R_Total, r_nettotal R_Nettotal, r_pramt, r_discbath, "
+                    + "r_refund, cashier Cashier, r_emp R_Emp, r_time, r_void "
+                    + "FROM t_sale "
+                    + "WHERE macno=? AND r_refno=? "
+                    + "AND r_plucode=? AND r_date=? "
+                    + "AND r_time=? "
+                    + "AND r_void='V' LIMIT 1";
             PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
             pstmt.setString(1, macno);
             pstmt.setString(2, refno);
@@ -115,11 +110,11 @@ public class LocalTSaleControl {
         STCardBean bean = null;
         try {
             mysqlLocal.open();
-            String sql = "select r_refno, r_total, r_nettotal, r_pramt, r_discbath"
-                    + " r_refno, r_refund, cashier Cashier, r_emp R_Emp,r_time "
-                    + "from t_sale "
-                    + "where macno=? and r_time=? "
-                    + "and r_plucode=? and r_date=? ";
+            String sql = "SELECT r_refno, r_total, r_nettotal, r_pramt, r_discbath, "
+                    + "r_refund, cashier Cashier, r_emp R_Emp, r_time "
+                    + "FROM t_sale "
+                    + "WHERE macno=? AND r_time=? "
+                    + "AND r_plucode=? AND r_date=? ";
             if (voidFlag) {
                 sql += " and r_void = 'V' ";
             } else {
@@ -160,7 +155,7 @@ public class LocalTSaleControl {
     }
     
     public List<STCardBean> getTSaleTransaction() {
-        List<STCardBean> listBean = new ArrayList();
+        List<STCardBean> listBean = new ArrayList<>();
         
         try {
             mysqlLocal.open();

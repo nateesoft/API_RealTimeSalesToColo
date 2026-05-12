@@ -11,7 +11,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import util.AppLogUtil;
-import util.MSG;
 
 /**
  *
@@ -118,7 +117,7 @@ public class DocumentsDownload extends javax.swing.JFrame {
             ResultSet rs = mysqlLocal.createStatement().executeQuery(sql);
             if (rs.next()) {
                 docInCase = true;
-                MSG.NOTICE("เอกสารนี้มีอยู่ในระบบอยู่แล้ว กรุณาแจ้งสำนักงานใหญ่ ให้ออกเอกสารใหม่");
+                System.out.println("เอกสารนี้มีอยู่ในระบบอยู่แล้ว กรุณาแจ้งสำนักงานใหญ่ ให้ออกเอกสารใหม่");
             }
 
         } catch (SQLException e) {

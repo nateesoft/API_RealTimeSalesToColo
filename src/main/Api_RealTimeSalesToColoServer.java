@@ -71,7 +71,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
      */
     private void startConnectionCheck() {
         jButton1.setEnabled(false);
-        new Thread(new Thread(() -> {
+        new Thread(() -> {
             int attempt = 0;
             while (true) {
                 attempt++;
@@ -111,17 +111,30 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                                 + " | Web: " + (webStatus ? "OK" : "FAIL")
                                 + " | Retry in 5s...")
                 );
+
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
-        }, "MySQL-ConnectionCheck")::start).start();
+        }, "MySQL-ConnectionCheck").start();
     }
 
     private boolean testLocalConnection() {
-        MySQLConnect testConn = new MySQLConnect();
         try {
-            testConn.open();
-            return testConn.getConnection() != null;
-        } finally {
-            testConn.close();
+            Class.forName("com.mysql.jdbc.Driver");
+            String url = "jdbc:mysql://" + MySQLConnect.HostName + ":" + MySQLConnect.PortNumber
+                    + "/" + MySQLConnect.DbName
+                    + "?useUnicode=true&characterEncoding=" + MySQLConnect.CharSet
+                    + "&serverTimezone=Asia/Bangkok&useSSL=false";
+            try (java.sql.Connection conn = java.sql.DriverManager.getConnection(
+                    url, MySQLConnect.UserName, MySQLConnect.Password)) {
+                return conn != null;
+            }
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -458,7 +471,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             if (stkFileBean != null) {
                 STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(bpcode, branchBean.getCode());
                 if (serverStkFileBean == null) {
-                    serverStkFileControl.saveNewData(serverStkFileBean);
+                    serverStkFileControl.saveNewData(stkFileBean);
                 } else {
                     serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
                 }
@@ -510,8 +523,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                         + " Nettotal, Refund, Refno, Cashier, EMP,"
                         + " UnitPrice, R_index)"
                         + " VALUES(?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)";
-                String sqlUpdate = "UPDATE ? "
-                        + "SET r_send='Y' "
+                String sqlUpdateSTran = "UPDATE s_tran SET r_send='Y' "
+                        + "WHERE r_refno=? AND r_index=? AND r_plucode=? "
+                        + "AND r_date=? AND r_time=? AND r_emp=? AND r_refund=?";
+                String sqlUpdateTSale = "UPDATE t_sale SET r_send='Y' "
                         + "WHERE r_refno=? AND r_index=? AND r_plucode=? "
                         + "AND r_date=? AND r_time=? AND r_emp=? AND r_refund=?";
                 final int totalItems = listBean.size();
@@ -523,7 +538,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     pbCheckUpdate.setString("เริ่มส่งข้อมูล ...");
                 });
 
-                try (PreparedStatement psInsert = mysqlServer.getConnection().prepareStatement(sqlInsert); PreparedStatement psUpdate = mysqlLocal.getConnection().prepareStatement(sqlUpdate)) {
+                try (PreparedStatement psInsert = mysqlServer.getConnection().prepareStatement(sqlInsert);
+                     PreparedStatement psUpdateSTran = mysqlLocal.getConnection().prepareStatement(sqlUpdateSTran);
+                     PreparedStatement psUpdateTSale = mysqlLocal.getConnection().prepareStatement(sqlUpdateTSale)) {
                     for (int i = 0; i < listBean.size(); i++) {
                         STCardBean stcardBean = listBean.get(i);
                         final int current = i + 1;
@@ -567,16 +584,11 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                         psInsert.executeUpdate();
 
                         // update status stcard local flag
-                        psUpdate.setString(1, stcardBean.getTableUpdate());
-                        psUpdate.setString(2, stcardBean.getRefNo());
-                        psUpdate.setString(3, stcardBean.getR_index());
-                        psUpdate.setString(4, stcardBean.getS_PCode());
-                        psUpdate.setString(5, stcardBean.getS_Date());
-                        psUpdate.setString(6, stcardBean.getS_EntryTime());
-                        psUpdate.setString(7, stcardBean.getEmp());
-                        psUpdate.setString(8, stcardBean.getRefund());
-
-                        psUpdate.executeUpdate();
+                        if ("s_tran".equals(stcardBean.getTableUpdate())) {
+                            applyLocalSendStatus(psUpdateSTran, stcardBean);
+                        } else {
+                            applyLocalSendStatus(psUpdateTSale, stcardBean);
+                        }
                     }
                 }
 
@@ -597,6 +609,17 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
     }
 
+    private void applyLocalSendStatus(PreparedStatement ps, STCardBean bean) throws SQLException {
+        ps.setString(1, bean.getRefNo());
+        ps.setString(2, bean.getR_index());
+        ps.setString(3, bean.getS_PCode());
+        ps.setString(4, bean.getS_Date());
+        ps.setString(5, bean.getS_EntryTime());
+        ps.setString(6, bean.getEmp());
+        ps.setString(7, bean.getRefund());
+        ps.executeUpdate();
+    }
+
     private void uploadUpdateVoid() {
         try {
             mysqlLocal.open();
@@ -604,7 +627,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
             String sql = "select * from t_sale where r_refund='V';";
             try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
-                List<STCardBean> listBean = new ArrayList();
+                List<STCardBean> listBean = new ArrayList<>();
                 while (rs.next()) {
                     STCardBean bean = new STCardBean();
                     bean.setS_Date(rs.getString("R_Date"));

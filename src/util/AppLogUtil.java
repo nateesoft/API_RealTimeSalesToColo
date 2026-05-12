@@ -20,7 +20,6 @@ public class AppLogUtil {
     static int countRunning = 0;
     static SimpleDateFormat logDateFmt = new SimpleDateFormat("yyyy-MM-dd");
     static FileHandler fh = null;
-    static FileHandler fhHtml = null;
 
     public static void log(Class t, String type, Exception e) {
         Logger logger = Logger.getLogger(t.getName());
