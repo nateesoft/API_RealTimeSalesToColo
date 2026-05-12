@@ -18,7 +18,6 @@ import database.MySQLConnectWebOnline;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -26,7 +25,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 import util.AppLogUtil;
 import util.DateConvert;
 
@@ -45,8 +47,10 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private final String TERMINAL_FIXED = "001";
     private final String STOCK_CODE = "A1";
-    private boolean processingData = false;
-    TranIOControl TIO = new TranIOControl();
+    private final TranIOControl TIO = new TranIOControl();
+
+    private final MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
+    private final MySQLConnect mysqlLocal = new MySQLConnect();
 
     public Api_RealTimeSalesToColoServer() {
         initComponents();
@@ -67,57 +71,52 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
      */
     private void startConnectionCheck() {
         jButton1.setEnabled(false);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                new Thread(() -> {
-                    int attempt = 0;
-                    while (true) {
-                        attempt++;
-                        final int currentAttempt = attempt;
-                        javax.swing.SwingUtilities.invokeLater(()
-                                -> btnStatus.setText("ตรวจสอบ MySQL... ครั้งที่ " + currentAttempt)
-                        );
+        new Thread(new Thread(() -> {
+            int attempt = 0;
+            while (true) {
+                attempt++;
+                final int currentAttempt = attempt;
+                javax.swing.SwingUtilities.invokeLater(()
+                        -> btnStatus.setText("ตรวจสอบ MySQL... ครั้งที่ " + currentAttempt)
+                );
 
-                        boolean localOk = testLocalConnection();
-                        boolean webOk = testWebConnection();
+                boolean localOk = testLocalConnection();
+                boolean webOk = testWebConnection();
 
-                        final boolean localStatus = localOk;
-                        final boolean webStatus = webOk;
-                        System.out.println("Attempt " + currentAttempt
-                                + " | Local MySQL: " + (localOk ? "OK" : "FAIL")
-                                + " | Web MySQL: " + (webOk ? "OK" : "FAIL"));
+                final boolean localStatus = localOk;
+                final boolean webStatus = webOk;
+                System.out.println("Attempt " + currentAttempt
+                        + " | Local MySQL: " + (localOk ? "OK" : "FAIL")
+                        + " | Web MySQL: " + (webOk ? "OK" : "FAIL"));
 
-                        if (localOk && webOk) {
-                            branchBean = new BranchControl().getData();
-                            final BranchBean bean = branchBean;
-                            javax.swing.SwingUtilities.invokeLater(() -> {
-                                if (bean != null) {
-                                    lblBranch.setText("รหัสสาขา : " + bean.getCode());
-                                    btnStatus.setText("MySQL เชื่อมต่อสำเร็จ : " + getCurrentTime());
-                                } else {
-                                    lblBranch.setText("ไม่พบข้อมูลสาขา");
-                                    btnStatus.setText("เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา");
-                                }
-
-                                initializeAndStartScheduler();
-                            });
-                            break;
+                if (localOk && webOk) {
+                    branchBean = new BranchControl().getData();
+                    final BranchBean bean = branchBean;
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        if (bean != null) {
+                            lblBranch.setText("รหัสสาขา : " + bean.getCode());
+                            btnStatus.setText("MySQL เชื่อมต่อสำเร็จ : " + getCurrentTime());
+                        } else {
+                            lblBranch.setText("ไม่พบข้อมูลสาขา");
+                            btnStatus.setText("เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา");
                         }
 
-                        javax.swing.SwingUtilities.invokeLater(()
-                                -> btnStatus.setText("Local: " + (localStatus ? "OK" : "FAIL")
-                                        + " | Web: " + (webStatus ? "OK" : "FAIL")
-                                        + " | Retry in 5s...")
-                        );
-                    }
-                }, "MySQL-ConnectionCheck").start();
+                        initializeAndStartScheduler();
+                    });
+                    break;
+                }
+
+                javax.swing.SwingUtilities.invokeLater(()
+                        -> btnStatus.setText("Local: " + (localStatus ? "OK" : "FAIL")
+                                + " | Web: " + (webStatus ? "OK" : "FAIL")
+                                + " | Retry in 5s...")
+                );
             }
-        }).start();
+        }, "MySQL-ConnectionCheck")::start).start();
     }
 
     private boolean testLocalConnection() {
-        database.MySQLConnect testConn = new database.MySQLConnect();
+        MySQLConnect testConn = new MySQLConnect();
         try {
             testConn.open();
             return testConn.getConnection() != null;
@@ -127,7 +126,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }
 
     private boolean testWebConnection() {
-        database.MySQLConnectWebOnline testConn = new database.MySQLConnectWebOnline();
+        MySQLConnectWebOnline testConn = new MySQLConnectWebOnline();
         try {
             testConn.open();
             return testConn.getConnection() != null;
@@ -145,23 +144,26 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
         // Task ที่จะ run ทุกๆ 5 นาที
         Runnable uploadTask = () -> {
-            javax.swing.SwingUtilities.invokeLater(() -> txtLogMSG.setText("กำลังเข้าสู่ ลูบ การส่งข้อมูลครับ 5 นาที"));
-            
+            SwingUtilities.invokeLater(() -> txtLogMSG.setText("กำลังเข้าสู่ ลูบ การส่งข้อมูลครับ 5 นาที"));
+
+            // update last refno
+            uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
+
             try {
                 System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
-                
-                uploadTranSection(localTSaleControl.getTransaction(), "t_sale");
-                uploadTranSection(localStranControl.getTransaction(), "s_tran");
-                uploadTranSection(localStranControl.getTransaction15DayAgo(branchBean.getCode()), "s_tran");
 
+                // upate stcard ไม่เอา S_Rem==SAL เนื่องจาก S_Rem==SAL จะต้องไปหาข้อมูล discount เพิ่มในตาราง T_Sale
+                uploadStcard();
+
+                updateStcardServerWithoutSALtype();
+
+                // อัพเดตย้อนหลังสำหรับรายการที่มีการ Void
                 uploadUpdateVoid();
 
-                // upate stcard
-                uploadStcard();//เอาที่ S_Rem ไม่เท่ากับ SAL
-                javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
+                SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
                 System.out.println("=== Scheduled upload completed ===");
             } catch (Exception e) {
-                e.printStackTrace();
+                AppLogUtil.log(this.getClass(), "error", e);
             }
         };
 
@@ -215,7 +217,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 102, 0));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("API-AutoSales Online V8.0 20260429/1137");
+        jLabel1.setText("API-AutoSales Online V8.0 20260512");
 
         txtLogMSG.setColumns(20);
         txtLogMSG.setRows(5);
@@ -405,6 +407,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         if (branchBean == null) {
             return;
         }
+
         // prepare stcard to send data
         List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
         if (listSTCardNotSend.isEmpty()) {
@@ -412,22 +415,13 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             return;
         }
 
-        // update last refno
-        uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
-
         // Phase 1: compute all values and collect valid items for batch insert
         List<ServerSTCardControl.STCardUploadParam> batchParams = new ArrayList<>();
         for (STCardBean stCardNotSend : listSTCardNotSend) {
-            StcardUploadLogic.ComputedParams params
-                    = StcardUploadLogic.computeParams(stCardNotSend, this::matchDiscount);
-
-            if (params.shouldSkip) {
-                continue;
-            }
-
             batchParams.add(new ServerSTCardControl.STCardUploadParam(
-                    stCardNotSend, params.discount, params.nettotal, params.refund, params.refno,
-                    params.cashier, params.emp, params.unitPrice, branchBean.getCode(), params.isSalType));
+                    stCardNotSend, 0, 0, stCardNotSend.getRefund(), stCardNotSend.getRefNo(),
+                    stCardNotSend.getCashier(), stCardNotSend.getEmp(),
+                    stCardNotSend.getUnitPrice(), branchBean.getCode(), false));
         }
 
         // Phase 2: batch insert all valid items to server (single connection)
@@ -438,16 +432,9 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             if (results[i]) {
                 ServerSTCardControl.STCardUploadParam p = batchParams.get(i);
                 txtLogMSG.setText("กำลังดำเนินการส่งข้อมูล stcard i = " + i);
-                if (p.isSalType) {
-                    // update flag local
-                    localStCard.updateSendStatus(p.bean, getCurrentDate(), getCurrentTime());
-                    uploadStkfile(p.bean.getS_PCode());
-                } else {
-                    // update flag local
-                    localStCard.updateSendStatusDone(p.bean, getCurrentDate(), getCurrentTime());
-                    // next step to update stkfile
-                    uploadStkfile(p.bean.getS_PCode());
-                }
+
+                localStCard.updateSendStatus(p.bean, getCurrentDate(), getCurrentTime());
+                uploadStkfile(p.bean.getS_PCode());
             }
         }
 
@@ -460,6 +447,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private void uploadStkfile(String bpcode) {
         branchBean = new BranchControl().getData();
         javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE Upload Process"));
+
         if (bpcode != null && !bpcode.equals("")) {
             STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
             if (stkFileBean == null) {
@@ -474,7 +462,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 } else {
                     serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
                 }
-
             }
         } else {
             List<STKFileBean> listStkFile = localStkFile.getAllData();
@@ -484,11 +471,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(stkFileBean.getbPcode(), stkFileBean.getBranch());
                     try {
                         if (serverStkFileBean == null) {
-                            // insert server StkFile
-                            MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
-                            mysqlServer.open();
                             serverStkFileControl.saveNewData(stkFileBean);
-                            mysqlServer.close();
                         }
                     } catch (Exception e) {
                         System.out.println(e.toString());
@@ -503,22 +486,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
     }
 
-    private STCardBean matchDiscount(String s_No, String s_Date, String s_PCode,
-            String checkFirstDigitSNo, STCardBean stCardNotSend) {
-        STCardBean bean = new STCardBean();
-        try {
-            if (s_Date.equals(getCurrentDate())) {
-                bean = processCurrentDate(s_No, checkFirstDigitSNo, s_PCode, s_Date, stCardNotSend);
-            } else {
-                bean = processNotCurrentDate(s_No, checkFirstDigitSNo, s_PCode, s_Date, stCardNotSend.getS_Out(), stCardNotSend.getS_OutCost());
-            }
-        } catch (SQLException e) {
-            Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
-        }
-
-        return bean;
-    }
-
     private final LocalPosHwSetupControl poshwControl = new LocalPosHwSetupControl();
     private final ServerPosHwSetupControl poshwServerControl = new ServerPosHwSetupControl();
 
@@ -528,15 +495,13 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             poshwServerControl.updateTime(receNo1, currentDate, currentTime, terminal, branchCode);
         }
     }
-    
-    private void uploadTranSection(List<STCardBean> listBean, String table) {
-        MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
-        MySQLConnect mysqlLocal = new MySQLConnect();
+
+    private void uploadSaleToSTCardSection(List<STCardBean> listBean) {
         try {
             mysqlServer.open();
             mysqlLocal.open();
-            if (!listBean.isEmpty()) {
 
+            if (!listBean.isEmpty()) {
                 String sqlInsert = "INSERT INTO stcard ("
                         + "s_date, s_no, s_subNo, s_Que, s_pcode,"
                         + " s_stk, s_in, s_out, s_incost, s_outcost,"
@@ -545,167 +510,167 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                         + " Nettotal, Refund, Refno, Cashier, EMP,"
                         + " UnitPrice, R_index)"
                         + " VALUES(?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)";
-                String sqlUpdate = "UPDATE " + table + " SET r_send='Y'"
-                        + " WHERE r_refno=? AND r_index=? AND r_plucode=?"
-                        + " AND r_date=? AND r_time=? AND r_emp=? AND r_refund=?";
+                String sqlUpdate = "UPDATE ? "
+                        + "SET r_send='Y' "
+                        + "WHERE r_refno=? AND r_index=? AND r_plucode=? "
+                        + "AND r_date=? AND r_time=? AND r_emp=? AND r_refund=?";
                 final int totalItems = listBean.size();
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     pbCheckUpdate.setStringPainted(true);
                     pbCheckUpdate.setMinimum(0);
                     pbCheckUpdate.setMaximum(totalItems);
                     pbCheckUpdate.setValue(0);
-                    pbCheckUpdate.setString("เริ่มส่งข้อมูล " + table + " ...");
+                    pbCheckUpdate.setString("เริ่มส่งข้อมูล ...");
                 });
-                try (PreparedStatement psInsert = mysqlServer.getConnection().prepareStatement(sqlInsert);
-                        PreparedStatement psUpdate = mysqlLocal.getConnection().prepareStatement(sqlUpdate)) {
+
+                try (PreparedStatement psInsert = mysqlServer.getConnection().prepareStatement(sqlInsert); PreparedStatement psUpdate = mysqlLocal.getConnection().prepareStatement(sqlUpdate)) {
                     for (int i = 0; i < listBean.size(); i++) {
-                        STCardBean b = listBean.get(i);
+                        STCardBean stcardBean = listBean.get(i);
                         final int current = i + 1;
-                        final String sqlMsg = "กำลังส่งข้อมูล " + table + " รหัส " + b.getS_PCode() + " ลำดับที่ " + current + "/" + totalItems;
+                        final String sqlMsg = "กำลังส่งข้อมูล " + stcardBean.getTableUpdate() + " "
+                                + "รหัส " + stcardBean.getS_PCode() + " "
+                                + "ลำดับที่ " + current + "/" + totalItems;
                         javax.swing.SwingUtilities.invokeLater(() -> {
                             txtSql.setText(sqlMsg);
                             pbCheckUpdate.setValue(current);
                             pbCheckUpdate.setString(current + " / " + totalItems);
                         });
 
-                        psInsert.setString(1, b.getS_Date());
-                        psInsert.setString(2, b.getS_No());
+                        // insert stcard server data
+                        psInsert.setString(1, stcardBean.getS_Date());
+                        psInsert.setString(2, stcardBean.getS_No());
                         psInsert.setString(3, "");
                         psInsert.setString(4, "0");
-                        psInsert.setString(5, b.getS_PCode());
-                        psInsert.setString(6, b.getS_Stk());
+                        psInsert.setString(5, stcardBean.getS_PCode());
+                        psInsert.setString(6, stcardBean.getS_Stk());
                         psInsert.setString(7, "0");
-                        psInsert.setDouble(8, b.getS_Out());
+                        psInsert.setDouble(8, stcardBean.getS_Out());
                         psInsert.setString(9, "0");
-                        psInsert.setDouble(10, b.getS_OutCost());
+                        psInsert.setDouble(10, stcardBean.getS_OutCost());
                         psInsert.setString(11, "0");
-                        psInsert.setString(12, b.getS_Rem());
-                        psInsert.setString(13, b.getS_User());
-                        psInsert.setString(14, b.getS_EntryDate());
-                        psInsert.setString(15, b.getS_EntryTime());
+                        psInsert.setString(12, stcardBean.getS_Rem());
+                        psInsert.setString(13, stcardBean.getS_User());
+                        psInsert.setString(14, stcardBean.getS_EntryDate());
+                        psInsert.setString(15, stcardBean.getS_EntryTime());
                         psInsert.setString(16, "N");
                         psInsert.setString(17, branchBean.getCode());
                         psInsert.setString(18, "N");
                         psInsert.setString(19, "POS");
-                        psInsert.setDouble(20, b.getDiscount());
-                        psInsert.setDouble(21, b.getNettotal());
-                        psInsert.setString(22, b.getRefund());
-                        psInsert.setString(23, b.getRefNo());
-                        psInsert.setString(24, b.getCashier());
-                        psInsert.setString(25, b.getEmp());
-                        psInsert.setDouble(26, b.getUnitPrice());
-                        psInsert.setString(27, b.getR_index());
+                        psInsert.setDouble(20, stcardBean.getDiscount());
+                        psInsert.setDouble(21, stcardBean.getNettotal());
+                        psInsert.setString(22, stcardBean.getRefund());
+                        psInsert.setString(23, stcardBean.getRefNo());
+                        psInsert.setString(24, stcardBean.getCashier());
+                        psInsert.setString(25, stcardBean.getEmp());
+                        psInsert.setDouble(26, stcardBean.getUnitPrice());
+                        psInsert.setString(27, stcardBean.getR_index());
                         psInsert.executeUpdate();
 
-                        psUpdate.setString(1, b.getRefNo());
-                        psUpdate.setString(2, b.getR_index());
-                        psUpdate.setString(3, b.getS_PCode());
-                        psUpdate.setString(4, b.getS_Date());
-                        psUpdate.setString(5, b.getS_EntryTime());
-                        psUpdate.setString(6, b.getEmp());
-                        psUpdate.setString(7, b.getRefund());
+                        // update status stcard local flag
+                        psUpdate.setString(1, stcardBean.getTableUpdate());
+                        psUpdate.setString(2, stcardBean.getRefNo());
+                        psUpdate.setString(3, stcardBean.getR_index());
+                        psUpdate.setString(4, stcardBean.getS_PCode());
+                        psUpdate.setString(5, stcardBean.getS_Date());
+                        psUpdate.setString(6, stcardBean.getS_EntryTime());
+                        psUpdate.setString(7, stcardBean.getEmp());
+                        psUpdate.setString(8, stcardBean.getRefund());
+
                         psUpdate.executeUpdate();
                     }
                 }
+
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     pbCheckUpdate.setValue(totalItems);
-                    pbCheckUpdate.setString("ส่งข้อมูล " + table + " เสร็จสิ้น (" + totalItems + " รายการ)");
+                    pbCheckUpdate.setString("ส่งข้อมูล เสร็จสิ้น (" + totalItems + " รายการ)");
                 });
 
                 for (int i = 0; i < listBean.size(); i++) {
                     uploadStkfile(listBean.get(i).getS_PCode());
                 }
-
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (SQLException e) {
             AppLogUtil.log(this.getClass(), "error", e);
         } finally {
             mysqlServer.close();
             mysqlLocal.close();
         }
-
     }
 
     private void uploadUpdateVoid() {
-        MySQLConnect mysqlLocal = new MySQLConnect();
-        MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
         try {
             mysqlLocal.open();
             mysqlServer.open();
 
             String sql = "select * from t_sale where r_refund='V';";
-            ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql);
-            ArrayList<STCardBean> listBean = new ArrayList();
-            while (rs.next()) {
-                STCardBean bean = new STCardBean();
-                bean.setS_Date(rs.getString("R_Date"));
-                bean.setS_PCode(rs.getString("R_Plucode"));
-                bean.setS_Stk("A1");
-                bean.setS_Out(rs.getInt("R_Quan"));
-                bean.setS_OutCost(rs.getInt("R_Total"));
-                bean.setS_Rem("SAL");
-                bean.setS_User(rs.getString("Cashier"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setR_time(rs.getString("R_time"));
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                bean.setUnitPrice(rs.getDouble("R_Price"));
-                bean.setR_index(rs.getString("R_Index"));
-                bean.setS_EntryTime(rs.getString("R_Time"));
+            try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
+                List<STCardBean> listBean = new ArrayList();
+                while (rs.next()) {
+                    STCardBean bean = new STCardBean();
+                    bean.setS_Date(rs.getString("R_Date"));
+                    bean.setS_PCode(rs.getString("R_Plucode"));
+                    bean.setS_Stk("A1");
+                    bean.setS_Out(rs.getInt("R_Quan"));
+                    bean.setS_OutCost(rs.getInt("R_Total"));
+                    bean.setS_Rem("SAL");
+                    bean.setS_User(rs.getString("Cashier"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setR_time(rs.getString("R_time"));
+                    bean.setNettotal(rs.getDouble("R_Nettotal"));
+                    bean.setRefund(rs.getString("R_Refund"));
+                    bean.setRefNo(rs.getString("R_Refno"));
+                    bean.setCashier(rs.getString("Cashier"));
+                    bean.setEmp(rs.getString("R_Emp"));
+                    bean.setUnitPrice(rs.getDouble("R_Price"));
+                    bean.setR_index(rs.getString("R_Index"));
+                    bean.setS_EntryTime(rs.getString("R_Time"));
 
-                listBean.add(bean);
-            }
-
-            final int totalVoid = listBean.size();
-            javax.swing.SwingUtilities.invokeLater(() -> {
-                pbCheckUpdate.setStringPainted(true);
-                pbCheckUpdate.setMinimum(0);
-                pbCheckUpdate.setMaximum(totalVoid > 0 ? totalVoid : 1);
-                pbCheckUpdate.setValue(0);
-                pbCheckUpdate.setString("อัพเดต Void (" + totalVoid + " รายการ)");
-            });
-            String sqlRefund = "UPDATE stcard SET refund=?"
-                    + " WHERE refno=? AND r_index=? AND s_pcode=?"
-                    + " AND s_entrydate=? AND s_entrytime=? AND s_out=?"
-                    + " AND emp=? AND cashier=? AND s_date=? AND refund<>'V'";
-            try (PreparedStatement psRefund = mysqlServer.getConnection().prepareStatement(sqlRefund)) {
-                for (int i = 0; i < listBean.size(); i++) {
-                    STCardBean b = listBean.get(i);
-                    final int currentVoid = i + 1;
-                    final String voidMsg = "Processing Void='V' " + b.getS_PCode() + " (" + currentVoid + "/" + totalVoid + ")";
-                    javax.swing.SwingUtilities.invokeLater(() -> {
-                        txtSql.setText(voidMsg);
-                        pbCheckUpdate.setValue(currentVoid);
-                        pbCheckUpdate.setString(currentVoid + " / " + totalVoid);
-                    });
-                    psRefund.setString(1, b.getRefund());
-                    psRefund.setString(2, b.getRefNo());
-                    psRefund.setString(3, b.getR_index());
-                    psRefund.setString(4, b.getS_PCode());
-                    psRefund.setString(5, b.getS_EntryDate());
-                    psRefund.setString(6, b.getS_EntryTime());
-                    psRefund.setDouble(7, b.getS_Out());
-                    psRefund.setString(8, b.getEmp());
-                    psRefund.setString(9, b.getCashier());
-                    psRefund.setString(10, b.getS_Date());
-                    psRefund.executeUpdate();
-                    uploadStkfile(b.getS_PCode());
+                    listBean.add(bean);
                 }
+                final int totalVoid = listBean.size();
                 javax.swing.SwingUtilities.invokeLater(() -> {
-                    pbCheckUpdate.setValue(totalVoid);
-                    pbCheckUpdate.setString("อัพเดต Void เสร็จสิ้น (" + totalVoid + " รายการ)");
+                    pbCheckUpdate.setStringPainted(true);
+                    pbCheckUpdate.setMinimum(0);
+                    pbCheckUpdate.setMaximum(totalVoid > 0 ? totalVoid : 1);
+                    pbCheckUpdate.setValue(0);
+                    pbCheckUpdate.setString("อัพเดต Void (" + totalVoid + " รายการ)");
                 });
+                String sqlRefund = "UPDATE stcard SET refund=?"
+                        + " WHERE refno=? AND r_index=? AND s_pcode=?"
+                        + " AND s_entrydate=? AND s_entrytime=? AND s_out=?"
+                        + " AND emp=? AND cashier=? AND s_date=? AND refund<>'V'";
+                try (PreparedStatement psRefund = mysqlServer.getConnection().prepareStatement(sqlRefund)) {
+                    for (int i = 0; i < listBean.size(); i++) {
+                        STCardBean b = listBean.get(i);
+                        final int currentVoid = i + 1;
+                        final String voidMsg = "Processing Void='V' " + b.getS_PCode() + " (" + currentVoid + "/" + totalVoid + ")";
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            txtSql.setText(voidMsg);
+                            pbCheckUpdate.setValue(currentVoid);
+                            pbCheckUpdate.setString(currentVoid + " / " + totalVoid);
+                        });
+                        psRefund.setString(1, b.getRefund());
+                        psRefund.setString(2, b.getRefNo());
+                        psRefund.setString(3, b.getR_index());
+                        psRefund.setString(4, b.getS_PCode());
+                        psRefund.setString(5, b.getS_EntryDate());
+                        psRefund.setString(6, b.getS_EntryTime());
+                        psRefund.setDouble(7, b.getS_Out());
+                        psRefund.setString(8, b.getEmp());
+                        psRefund.setString(9, b.getCashier());
+                        psRefund.setString(10, b.getS_Date());
+                        psRefund.executeUpdate();
+                        uploadStkfile(b.getS_PCode());
+                    }
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        pbCheckUpdate.setValue(totalVoid);
+                        pbCheckUpdate.setString("อัพเดต Void เสร็จสิ้น (" + totalVoid + " รายการ)");
+                    });
+                }
             }
-            rs.close();
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
             AppLogUtil.log(this.getClass(), "error", e);
-            e.printStackTrace();
         } finally {
             mysqlLocal.close();
             mysqlServer.close();
@@ -751,212 +716,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     // End of variables declaration//GEN-END:variables
 
     private final LocalTSaleControl localTSaleControl = new LocalTSaleControl();
-    private final DecimalFormat intFM = new DecimalFormat("00");
-
-    private STCardBean processCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode,
-            String s_Date, STCardBean bean) {
-        STCardBean beanMapping;
-        String macno, refno;
-
-        //ถ้าเป็นว่ายกเลิกบิล
-        if (checkFirstDigitSNo.equals("R")) {
-            macno = s_No.substring(2, 5);
-            String[] strs1 = s_No.split("/");
-            refno = strs1[1];
-            beanMapping = localTSaleControl.getDataByMacNoRefNoPluCodeFlagRVoid(macno, refno, s_PCode, s_Date, bean.getR_time());
-        } else {
-            //เป็นบิลปกติ ไม่ได้ยกเลิก
-            String[] strs = s_No.split("-");
-            String r_time;
-
-            macno = strs[0];
-            //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
-            if (s_No.length() == 14) {
-                String chkSNO = s_No.substring(3, 6);
-                if (chkSNO.equals("-1-") || chkSNO.equals("-2-") || chkSNO.equals("-3-") || chkSNO.equals("-4-")
-                        || chkSNO.equals("-5-") || chkSNO.equals("-6-") || chkSNO.equals("-7-")
-                        || chkSNO.equals("-8-") || chkSNO.equals("-9-")) {
-                    r_time = strs[2];
-                } else {
-                    r_time = strs[1];
-                }
-            } else {
-                r_time = strs[1];
-            }
-
-            beanMapping = localTSaleControl.getDataByPluCodeRdateRTimeRVoid(s_PCode, s_Date, r_time);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            int hh = 0;
-            int mm = 0;
-            int ss = 0;
-            String r_newTime;
-            hh = Integer.parseInt(r_time.substring(0, 2));
-            mm = Integer.parseInt(r_time.substring(3, 5));
-            ss = Integer.parseInt(r_time.substring(6, 8));
-            ss = ss - 1;
-            if (ss == -1) {
-                ss = 59;
-                mm = mm - 1;
-            }
-            if (mm == -1) {
-                mm = 59;
-                hh = hh - 1;
-            }
-            r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
-            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, true);
-
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 1);
-            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 2);
-            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 3);
-            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 4);
-            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 5);
-            beanMapping = localTSaleControl.getDataByMacnoRTimeRDatePluCodeRVoid(macno, r_newTime, s_PCode, s_Date, false);
-        }
-
-        return beanMapping;
-    }
 
     private final LocalSTranControl localStranControl = new LocalSTranControl();
-
-    private STCardBean processNotCurrentDate(String s_No, String checkFirstDigitSNo, String s_PCode,
-            String s_Date, double s_out, double s_outCost) throws SQLException {
-        DecimalFormat df = new DecimalFormat("#0");
-        String macno;
-        String r_time;
-        String refno;
-
-        String[] strs = s_No.split("-");
-        macno = strs[0];
-        if (s_No.length() == 14 && s_No.substring(3, 6).equals("-1-")) {
-            r_time = strs[2];
-        } else {
-            r_time = strs[1];
-        }
-
-        STCardBean beanMapping;
-
-        //ถ้าเป็นเอกสาร คืนสินค้า
-        if (checkFirstDigitSNo.equals("R")) {
-            macno = s_No.substring(2, 5);
-            String[] strs1 = s_No.split("/");
-            refno = strs1[1];
-            beanMapping = localStranControl.getDataByMacnoTimeDatePluCode(macno, null, s_PCode, s_Date,
-                    refno, df.format(s_out), df.format(s_outCost), checkFirstDigitSNo, s_No);
-        } else {
-            beanMapping = localStranControl.getDataByMacnoTimeDatePluCode(macno, r_time, s_PCode, s_Date,
-                    null, null, null, checkFirstDigitSNo, s_No);
-        }
-
-        if (beanMapping != null) {
-            return beanMapping;
-        }
-
-        if (checkFirstDigitSNo.equals("R")) {
-            String[] strs1 = s_No.split("/");
-            refno = strs1[1];
-            beanMapping = localStranControl.getDataByMacnoRefnoPluCodeRDateFlagVoid(macno, refno, s_PCode, s_Date, checkFirstDigitSNo, s_No);
-        } else {
-            String[] strsTime = s_No.split("-");
-            macno = strsTime[0];
-            //ดักไว้ หากมีผิดพลาดเรื่อง Index 001-1-124451 หาไม่เจอว่ามาจากอะไร
-            if (s_No.length() == 14) {
-                String chkSNO = s_No.substring(3, 6);
-                if (chkSNO.equals("-1-") || chkSNO.equals("-2-") || chkSNO.equals("-3-") || chkSNO.equals("-4-")
-                        || chkSNO.equals("-5-") || chkSNO.equals("-6-") || chkSNO.equals("-7-")
-                        || chkSNO.equals("-8-") || chkSNO.equals("-9-")) {
-                    r_time = strsTime[2];
-                } else {
-                    r_time = strsTime[1];
-                }
-            } else {
-                r_time = strsTime[1];
-            }
-
-            String[] strTimes = r_time.split(":");
-            int hh = Integer.parseInt(strTimes[0]);
-            int mm = Integer.parseInt(strTimes[1]);
-            int ss = Integer.parseInt(strTimes[2]);
-            ss = ss - 1;
-            if (ss == -1) {
-                ss = 59;
-                mm = mm - 1;
-            }
-            if (mm == -1) {
-                mm = 59;
-                hh = hh - 1;
-            }
-
-            if (checkFirstDigitSNo.equals("R")) {
-                macno = s_No.substring(2, 5);
-                String[] strs1 = s_No.split("/");
-                refno = strs1[1];
-                beanMapping = localStranControl.getDataByCondition(macno, refno, s_PCode, s_Date, r_time, true, checkFirstDigitSNo, s_No);
-            } else {
-                String r_newTime = intFM.format(hh) + ":" + intFM.format(mm) + ":" + intFM.format(ss);
-                beanMapping = localStranControl.getDataByCondition(macno, null, s_PCode, s_Date, r_newTime, null, checkFirstDigitSNo, s_No);
-            }
-
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            String r_newTime = formatTimeMinus(hh, mm, ss, 1);
-            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 2);
-            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 3);
-            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 4);
-            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
-            if (beanMapping != null) {
-                return beanMapping;
-            }
-
-            r_newTime = formatTimeMinus(hh, mm, ss, 5);
-            beanMapping = localStranControl.getDataByConditionBetweenTime(macno, null, s_PCode, s_Date, r_newTime, false, checkFirstDigitSNo, s_No);
-        }
-
-        return beanMapping;
-    }
 
     private String getCurrentDate() {
         return dateConvert.GetCurrentDate();
@@ -966,17 +727,14 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         return dateConvert.GetCurrentTime();
     }
 
-    /**
-     * คำนวณ time string โดยลบ steps วินาทีจาก hh:mm:ss พร้อม wrap-around
-     */
-    private String formatTimeMinus(int hh, int mm, int ss, int steps) {
-        int totalSeconds = hh * 3600 + mm * 60 + ss - steps;
-        if (totalSeconds < 0) {
-            totalSeconds += 86400;
-        }
-        int nh = totalSeconds / 3600;
-        int nm = (totalSeconds % 3600) / 60;
-        int ns = totalSeconds % 60;
-        return intFM.format(nh) + ":" + intFM.format(nm) + ":" + intFM.format(ns);
+    private void updateStcardServerWithoutSALtype() {
+        // รายการที่ยังไม่ปิดสิ้นวัน
+        List<STCardBean> list1 = localTSaleControl.getTSaleTransaction();
+        List<STCardBean> list2 = localStranControl.getSTranTransaction();
+        List<STCardBean> list3 = localStranControl.getTransaction15DayAgo(branchBean.getCode());
+
+        List<STCardBean> result = Stream.of(list1, list2, list3).flatMap(List::stream).collect(Collectors.toList());
+        uploadSaleToSTCardSection(result);
     }
+
 }

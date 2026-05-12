@@ -255,54 +255,52 @@ public class LocalSTranControl {
         return bean;
     }
 
-    public List<STCardBean> getTransaction() {
+    public List<STCardBean> getSTranTransaction() {
         List<STCardBean> listBean = new ArrayList();
 
         try {
             mysqlLocal.open();
 
             String sql = "select * from s_tran where r_send='N' order by r_refno, r_index;";
-            ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql);
+            try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
+                while (rs.next()) {
+                    STCardBean bean = new STCardBean();
+                    bean.setS_Date(rs.getString("R_Date"));
+                    bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
+                    bean.setS_Que(0);
+                    bean.setS_PCode(rs.getString("R_Plucode"));
+                    bean.setS_Stk("A1");
+                    bean.setS_In(0);
+                    bean.setS_Out(rs.getInt("R_Quan"));
+                    bean.setS_InCost(0);
+                    bean.setS_OutCost(rs.getInt("R_Total"));
+                    bean.setS_ACost(0);
+                    bean.setS_Rem("SAL");
+                    bean.setS_User(rs.getString("Cashier"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setR_time(rs.getString("R_time"));
+                    bean.setS_Link("");
+                    bean.setSource_Data("POS");
+                    bean.setDataSync("N");
 
-            while (rs.next()) {
-                STCardBean bean = new STCardBean();
-                bean.setS_Date(rs.getString("R_Date"));
-                bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
-                bean.setS_Que(0);
-                bean.setS_PCode(rs.getString("R_Plucode"));
-                bean.setS_Stk("A1");
-                bean.setS_In(0);
-                bean.setS_Out(rs.getInt("R_Quan"));
-                bean.setS_InCost(0);
-                bean.setS_OutCost(rs.getInt("R_Total"));
-                bean.setS_ACost(0);
-                bean.setS_Rem("SAL");
-                bean.setS_User(rs.getString("Cashier"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setR_time(rs.getString("R_time"));
-                bean.setS_Link("");
-                bean.setSource_Data("POS");
-                bean.setDataSync("N");
-                double discount = 0;
-                discount = rs.getDouble("R_Nettotal") - rs.getDouble("R_Total");
-                if (discount < 0) {
-                    discount = discount * -1;
+                    double discount = Math.abs(rs.getDouble("R_Nettotal") - rs.getDouble("R_Total"));
+                    bean.setDiscount(discount);
+
+                    bean.setNettotal(rs.getDouble("R_Nettotal"));
+                    bean.setRefund(rs.getString("R_Refund"));
+                    bean.setRefNo(rs.getString("R_Refno"));
+                    bean.setCashier(rs.getString("Cashier"));
+                    bean.setEmp(rs.getString("R_Emp"));
+                    bean.setUnitPrice(rs.getDouble("R_Price"));
+                    bean.setR_index(rs.getString("R_Index"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setS_EntryTime(rs.getString("R_Time"));
+                    bean.setS_Stk(rs.getString("STKCode"));
+
+                    bean.setTableUpdate("s_tran");
+                    listBean.add(bean);
                 }
-                bean.setDiscount(discount);
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                bean.setUnitPrice(rs.getDouble("R_Price"));
-                bean.setR_index(rs.getString("R_Index"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setS_EntryTime(rs.getString("R_Time"));
-                bean.setS_Stk(rs.getString("STKCode"));
-
-                listBean.add(bean);
             }
-            rs.close();
         } catch (SQLException e) {
             Logger.getLogger(LocalTSaleControl.class.getName()).log(Level.SEVERE, null, e);
         } finally {
@@ -318,52 +316,55 @@ public class LocalSTranControl {
         try {
             int i = 0;
             mysqlLocal.open();
-            String sql = "select * from s_tran where r_date between'" + dc.minusDate(dc.GetCurrentDate(), 15) + "' and '" + dc.minusDate(dc.GetCurrentDate(), 1) + "' order by r_refno, r_index;";
-           System.out.println(sql);
-            ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql);
-            while (rs.next()) {
-                STCardBean bean = new STCardBean();
-                bean.setS_Date(rs.getString("R_Date"));
-                bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
-                bean.setS_Que(0);
-                bean.setS_PCode(rs.getString("R_Plucode"));
-                bean.setS_Stk("A1");
-                bean.setS_In(0);
-                bean.setS_Out(rs.getInt("R_Quan"));
-                bean.setS_InCost(0);
-                bean.setS_OutCost(rs.getInt("R_Total"));
-                bean.setS_ACost(0);
-                bean.setS_Rem("SAL");
-                bean.setS_User(rs.getString("Cashier"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setR_time(rs.getString("R_time"));
-                bean.setS_Link("");
-                bean.setSource_Data("POS");
-                bean.setDataSync("N");
-                double discount = 0;
-                discount = rs.getDouble("R_Nettotal") - rs.getDouble("R_Total");
-                if (discount < 0) {
-                    discount = discount * -1;
-                }
-                bean.setDiscount(discount);
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                bean.setUnitPrice(rs.getDouble("R_Price"));
-                bean.setR_index(rs.getString("R_Index"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setS_EntryTime(rs.getString("R_Time"));
-                bean.setS_Stk(rs.getString("STKCode"));
-                boolean data = checkDataAllReady(bean, branch);
-                if (data == false) {
-                    listBean.add(bean);
-                    i++;
-                    System.out.println("Processing .... Add Bean Array " + i);
+            String sql = "select * from s_tran "
+                    + "where r_date between'" + dc.minusDate(dc.GetCurrentDate(), 15) + "' "
+                    + "and '" + dc.minusDate(dc.GetCurrentDate(), 1) + "' "
+                    + "order by r_refno, r_index;";
+            try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
+                while (rs.next()) {
+                    STCardBean bean = new STCardBean();
+                    bean.setS_Date(rs.getString("R_Date"));
+                    bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
+                    bean.setS_Que(0);
+                    bean.setS_PCode(rs.getString("R_Plucode"));
+                    bean.setS_Stk("A1");
+                    bean.setS_In(0);
+                    bean.setS_Out(rs.getInt("R_Quan"));
+                    bean.setS_InCost(0);
+                    bean.setS_OutCost(rs.getInt("R_Total"));
+                    bean.setS_ACost(0);
+                    bean.setS_Rem("SAL");
+                    bean.setS_User(rs.getString("Cashier"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setR_time(rs.getString("R_time"));
+                    bean.setS_Link("");
+                    bean.setSource_Data("POS");
+                    bean.setDataSync("N");
+
+                    double discount = Math.abs(rs.getDouble("R_Nettotal") - rs.getDouble("R_Total"));
+                    bean.setDiscount(discount);
+
+                    bean.setNettotal(rs.getDouble("R_Nettotal"));
+                    bean.setRefund(rs.getString("R_Refund"));
+                    bean.setRefNo(rs.getString("R_Refno"));
+                    bean.setCashier(rs.getString("Cashier"));
+                    bean.setEmp(rs.getString("R_Emp"));
+                    bean.setUnitPrice(rs.getDouble("R_Price"));
+                    bean.setR_index(rs.getString("R_Index"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setS_EntryTime(rs.getString("R_Time"));
+                    bean.setS_Stk(rs.getString("STKCode"));
+
+                    bean.setTableUpdate("s_tran");
+
+                    boolean data = checkDataAllReady(bean, branch);
+                    if (data == false) {
+                        listBean.add(bean);
+                        i++;
+                        System.out.println("Processing .... Add Bean Array " + i);
+                    }
                 }
             }
-            rs.close();
         } catch (SQLException e) {
             Logger.getLogger(LocalTSaleControl.class.getName()).log(Level.SEVERE, null, e);
         } finally {
@@ -379,20 +380,17 @@ public class LocalSTranControl {
         mysqlServer.open();
         try {
             String sql = "select * from stcard "
-                    + "where "
-                    + "s_bran='" + branch + "' "
+                    + "where s_bran='" + branch + "' "
                     + "and refno='" + bean.getRefNo() + "' "
                     + "and r_index='" + bean.getR_index() + "' "
                     + "and s_date='" + bean.getS_Date() + "' "
                     + "and s_rem='SAL' ;";
-            ResultSet rs = mysqlServer.getConnection().createStatement().executeQuery(sql);
-            if (rs.next()) {
-                allReadyData = true;
-            } else {
-                allReadyData = false;
+            try (ResultSet rs = mysqlServer.getConnection().createStatement().executeQuery(sql)) {
+                if (rs.next()) {
+                    allReadyData = true;
+                }
             }
-
-        } catch (Exception e) {
+        } catch (SQLException e) {
             Logger.getLogger(LocalTSaleControl.class.getName()).log(Level.SEVERE, null, e);
         } finally {
             mysqlServer.close();

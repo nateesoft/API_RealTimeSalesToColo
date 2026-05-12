@@ -5,8 +5,6 @@
 package com.ics.pos.core.controller;
 
 import com.ics.bean.STCardBean;
-import com.ics.bean.STKFileBean;
-import com.ics.bean.TraninOut;
 import database.MySQLConnect;
 import database.MySQLConnectWebOnline;
 import java.sql.ResultSet;
@@ -27,7 +25,7 @@ public class TranIOControl {
     private String Branch = "";
 
     public List<STCardBean> TiNDownload(String typeIO) {
-        ArrayList<STCardBean> list = new ArrayList();
+        List<STCardBean> list = new ArrayList();
         list.clear();
         try {
             mysqlServer.open();

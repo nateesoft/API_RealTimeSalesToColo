@@ -37,6 +37,8 @@ public class STCardBean {
     private String source_Data = "";
     private double unitPrice = 0.00;
     private String r_index = "";
+    
+    private String tableUpdate = "";
 
     public String getR_index() {
         return r_index;
@@ -260,6 +262,14 @@ public class STCardBean {
 
     public void setSource_Data(String source_Data) {
         this.source_Data = source_Data;
+    }
+
+    public String getTableUpdate() {
+        return tableUpdate;
+    }
+
+    public void setTableUpdate(String tableUpdate) {
+        this.tableUpdate = tableUpdate;
     }
 
 }

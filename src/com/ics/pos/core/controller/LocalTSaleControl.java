@@ -159,53 +159,51 @@ public class LocalTSaleControl {
         return bean;
     }
     
-    public List<STCardBean> getTransaction() {
+    public List<STCardBean> getTSaleTransaction() {
         List<STCardBean> listBean = new ArrayList();
         
         try {
             mysqlLocal.open();
             
             String sql = "select * from t_sale where r_send='N' order by r_refno, r_index;";
-            ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql);
-
-            while (rs.next()) {
-                STCardBean bean = new STCardBean();
-                bean.setS_Date(rs.getString("R_Date"));
-                bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
-                bean.setS_Que(0);
-                bean.setS_PCode(rs.getString("R_Plucode"));
-                bean.setS_Stk("A1");
-                bean.setS_In(0);
-                bean.setS_Out(rs.getInt("R_Quan"));
-                bean.setS_InCost(0);
-                bean.setS_OutCost(rs.getInt("R_Total"));
-                bean.setS_ACost(0);
-                bean.setS_Rem("SAL");
-                bean.setS_User(rs.getString("Cashier"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setR_time(rs.getString("R_time"));
-                bean.setS_Link("");
-                bean.setSource_Data("POS");
-                bean.setDataSync("N");
-                double discount = 0;
-                discount = rs.getDouble("R_Nettotal") - rs.getDouble("R_Total");
-                if (discount < -1) {
-                    discount = discount * -1;
+            try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
+                while (rs.next()) {
+                    STCardBean bean = new STCardBean();
+                    bean.setS_Date(rs.getString("R_Date"));
+                    bean.setS_No(rs.getString("R_Refno") + "/" + rs.getString("R_Time"));
+                    bean.setS_Que(0);
+                    bean.setS_PCode(rs.getString("R_Plucode"));
+                    bean.setS_Stk("A1");
+                    bean.setS_In(0);
+                    bean.setS_Out(rs.getInt("R_Quan"));
+                    bean.setS_InCost(0);
+                    bean.setS_OutCost(rs.getInt("R_Total"));
+                    bean.setS_ACost(0);
+                    bean.setS_Rem("SAL");
+                    bean.setS_User(rs.getString("Cashier"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setR_time(rs.getString("R_time"));
+                    bean.setS_Link("");
+                    bean.setSource_Data("POS");
+                    bean.setDataSync("N");
+                    
+                    double discount = Math.abs(rs.getDouble("R_Nettotal") - rs.getDouble("R_Total"));
+                    bean.setDiscount(discount);
+                    
+                    bean.setNettotal(rs.getDouble("R_Nettotal"));
+                    bean.setRefund(rs.getString("R_Refund"));
+                    bean.setRefNo(rs.getString("R_Refno"));
+                    bean.setCashier(rs.getString("Cashier"));
+                    bean.setEmp(rs.getString("R_Emp"));
+                    bean.setUnitPrice(rs.getDouble("R_Price"));
+                    bean.setR_index(rs.getString("R_Index"));
+                    bean.setS_EntryDate(rs.getString("R_Date"));
+                    bean.setS_EntryTime(rs.getString("R_Time"));
+                    
+                    bean.setTableUpdate("t_sale");
+                    listBean.add(bean);
                 }
-                bean.setDiscount(discount);
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                bean.setUnitPrice(rs.getDouble("R_Price"));
-                bean.setR_index(rs.getString("R_Index"));
-                bean.setS_EntryDate(rs.getString("R_Date"));
-                bean.setS_EntryTime(rs.getString("R_Time"));
-                
-                listBean.add(bean);
             }
-            rs.close();
         } catch (SQLException e) {
             Logger.getLogger(LocalTSaleControl.class.getName()).log(Level.SEVERE, null, e);
         } finally {

@@ -7,8 +7,10 @@ import database.MySQLConnect;
 import database.MySQLConnectWebOnline;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import util.AppLogUtil;
 import util.MSG;
 
 /**
@@ -32,7 +34,7 @@ public class DocumentsDownload extends javax.swing.JFrame {
         try {
             receiveDocuments(mysql.getConnection(), mysqlWebOnline.getConnection());
         } catch (Exception e) {
-            e.printStackTrace();
+            AppLogUtil.log(this.getClass(), "error", e);
         }
         mysql.close();
         mysqlWebOnline.close();
@@ -103,8 +105,8 @@ public class DocumentsDownload extends javax.swing.JFrame {
 
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (SQLException e) {
+            AppLogUtil.log(this.getClass(), "error", e);
         }
     }
 
@@ -119,8 +121,8 @@ public class DocumentsDownload extends javax.swing.JFrame {
                 MSG.NOTICE("เอกสารนี้มีอยู่ในระบบอยู่แล้ว กรุณาแจ้งสำนักงานใหญ่ ให้ออกเอกสารใหม่");
             }
 
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (SQLException e) {
+            AppLogUtil.log(this.getClass(), "error", e);
         }
         return docInCase;
     }

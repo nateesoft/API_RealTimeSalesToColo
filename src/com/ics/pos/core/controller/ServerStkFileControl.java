@@ -72,12 +72,10 @@ public class ServerStkFileControl {
         return bean;
     }
 
-//    public STKFileBean saveNewData(String bpCode, String branchCode, String stockCode) {
     public STKFileBean saveNewData(STKFileBean bean) {
         try {
             DateConvert dc = new DateConvert();
             if (bean != null) {
-                MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
                 mysqlServer.open();
                 String sql = "insert ignore into stkfile (bpcode,bstk,bqty,bamt,"
                         + "bqty0,bqty1,bqty2,bqty3,bqty4,"
@@ -134,7 +132,6 @@ public class ServerStkFileControl {
                 } else {
                     System.err.println("Cannot Add new Stkfile Server Because : bean is null");
                 }
-                mysqlServer.close();
             }
 
         } catch (SQLException ex) {
