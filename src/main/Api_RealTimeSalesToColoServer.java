@@ -29,7 +29,6 @@ import java.util.logging.Logger;
 import javax.swing.JFrame;
 import util.AppLogUtil;
 import util.DateConvert;
-import util.MSG;
 
 /**
  *
@@ -100,61 +99,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                                     lblBranch.setText("ไม่พบข้อมูลสาขา");
                                     btnStatus.setText("เกิดข้อผิดพลาด: ไม่พบข้อมูลสาขา");
                                 }
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        for (int i = 0; i <= 10; i++) {
-                                            if (processingData == false) {
-                                                getTransectionTSale();
-                                                try {
-                                                    Thread.sleep(3600 * 2);
-                                                } catch (Exception e) {
-                                                }
-                                            }
-                                            try {
-                                                Thread.sleep(3600 * 2);
-                                            } catch (Exception e) {
-                                            }
-                                            if (i == 9) {
-                                                i = 0;
-                                            }
-                                        }
 
-                                    }
-                                }).start();
-
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        getTransectionSTran();
-                                        getTransectionSTran15DayAgo();
-                                    }
-                                }).start();
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                         uploadStkfile("");
-                                    }
-                                }).start();
                                 initializeAndStartScheduler();
-
-                                new Thread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        for (int i = 0; i <= 10; i++) {
-                                            uploadUpdateVoid();
-                                            if (i >= 9) {
-                                                i = 0;
-                                            }
-                                            try {
-                                                Thread.sleep((1000 * 60) * 5);
-                                            } catch (Exception e) {
-                                            }
-                                        }
-
-                                    }
-                                }).start();
-//
                             });
                             break;
                         }
@@ -164,13 +110,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                                         + " | Web: " + (webStatus ? "OK" : "FAIL")
                                         + " | Retry in 5s...")
                         );
-
-                        try {
-                            Thread.sleep(5000);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                            return;
-                        }
                     }
                 }, "MySQL-ConnectionCheck").start();
             }
@@ -207,15 +146,22 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         // Task ที่จะ run ทุกๆ 5 นาที
         Runnable uploadTask = () -> {
             javax.swing.SwingUtilities.invokeLater(() -> txtLogMSG.setText("กำลังเข้าสู่ ลูบ การส่งข้อมูลครับ 5 นาที"));
+            
             try {
                 System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
+                
+                uploadTranSection(localTSaleControl.getTransaction(), "t_sale");
+                uploadTranSection(localStranControl.getTransaction(), "s_tran");
+                uploadTranSection(localStranControl.getTransaction15DayAgo(branchBean.getCode()), "s_tran");
+
+                uploadUpdateVoid();
 
                 // upate stcard
-                uploadStcard();
+                uploadStcard();//เอาที่ S_Rem ไม่เท่ากับ SAL
                 javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
                 System.out.println("=== Scheduled upload completed ===");
             } catch (Exception e) {
-                Logger.getLogger(Api_RealTimeSalesToColoServer.class.getName()).log(Level.SEVERE, null, e);
+                e.printStackTrace();
             }
         };
 
@@ -269,7 +215,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         jLabel1.setFont(new java.awt.Font("Tahoma", 1, 12)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 102, 0));
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
-        jLabel1.setText("API-AutoSales Online V8.0 20260427/1824");
+        jLabel1.setText("API-AutoSales Online V8.0 20260429/1137");
 
         txtLogMSG.setColumns(20);
         txtLogMSG.setRows(5);
@@ -515,7 +461,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         branchBean = new BranchControl().getData();
         javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE Upload Process"));
         if (bpcode != null && !bpcode.equals("")) {
-
             STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
             if (stkFileBean == null) {
                 stkFileBean = localStkFile.saveNewData(bpcode, branchBean.getCode(), STOCK_CODE);
@@ -525,11 +470,11 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             if (stkFileBean != null) {
                 STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(bpcode, branchBean.getCode());
                 if (serverStkFileBean == null) {
-                    serverStkFileControl.saveNewData(bpcode, stkFileBean.getBranch(), STOCK_CODE);
+                    serverStkFileControl.saveNewData(serverStkFileBean);
+                } else {
+                    serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
                 }
 
-                // update server stkfile
-                serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
             }
         } else {
             List<STKFileBean> listStkFile = localStkFile.getAllData();
@@ -537,9 +482,16 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 for (int i = 0; i < listStkFile.size(); i++) {
                     STKFileBean stkFileBean = (STKFileBean) listStkFile.get(i);
                     STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(stkFileBean.getbPcode(), stkFileBean.getBranch());
-                    if (serverStkFileBean == null) {
-                        // insert server StkFile
-                        serverStkFileControl.saveNewData(stkFileBean.getbPcode(), stkFileBean.getBranch(), STOCK_CODE);
+                    try {
+                        if (serverStkFileBean == null) {
+                            // insert server StkFile
+                            MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
+                            mysqlServer.open();
+                            serverStkFileControl.saveNewData(stkFileBean);
+                            mysqlServer.close();
+                        }
+                    } catch (Exception e) {
+                        System.out.println(e.toString());
                     }
 
                     serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
@@ -576,42 +528,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             poshwServerControl.updateTime(receNo1, currentDate, currentTime, terminal, branchCode);
         }
     }
-
-    private void getTransectionTSale() {
-        List<STCardBean> listBean = localTSaleControl.getTransaction();
-        int size = listBean.size();
-        for (STCardBean bean : listBean) {
-            processingData = true;
-            size--;
-            final String msg = "Processing Local (" + bean.getS_PCode() + ")' / " + listBean.size() + "' : " + size;
-            javax.swing.SwingUtilities.invokeLater(() -> txtLogMSG.setText(msg));
-        }
-        uploadTranSection(listBean, "t_sale");
-        processingData = false;
-    }
-
-    private void getTransectionSTran() {
-        List<STCardBean> listBean = localStranControl.getTransaction();
-        int size = listBean.size();
-        for (STCardBean bean : listBean) {
-            size--;
-            final String msg = "Processing Local (" + bean.getS_PCode() + ")' / " + listBean.size() + "' : " + size;
-            javax.swing.SwingUtilities.invokeLater(() -> txtLogMSG.setText(msg));
-        }
-        uploadTranSection(listBean, "s_tran");
-    }
-
-    private void getTransectionSTran15DayAgo() {
-        List<STCardBean> listBean = localStranControl.getTransaction15DayAgo(branchBean.getCode());
-        int size = listBean.size();
-        for (STCardBean bean : listBean) {
-            size--;
-            final String msg = "Processing Local (" + bean.getS_PCode() + ")' / " + listBean.size() + "' : " + size;
-            javax.swing.SwingUtilities.invokeLater(() -> txtLogMSG.setText(msg));
-        }
-        uploadTranSection(listBean, "s_tran");
-    }
-
+    
     private void uploadTranSection(List<STCardBean> listBean, String table) {
         MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
         MySQLConnect mysqlLocal = new MySQLConnect();

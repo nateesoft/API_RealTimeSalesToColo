@@ -286,4 +286,9 @@ public class STKFileBean {
         this.branch = branch;
     }
 
+    @Override
+    public String toString() {
+        return "STKFileBean{" + "bPcode=" + bPcode + ", bStk=" + bStk + ", bQty=" + bQty + ", bAmt=" + bAmt + ", bTotalAmt=" + bTotalAmt + ", bQty0=" + bQty0 + ", bQty1=" + bQty1 + ", bQty2=" + bQty2 + ", bQty3=" + bQty3 + ", bQty4=" + bQty4 + ", bQty5=" + bQty5 + ", bQty6=" + bQty6 + ", bQty7=" + bQty7 + ", bQty8=" + bQty8 + ", bQty9=" + bQty9 + ", bQty10=" + bQty10 + ", bQty11=" + bQty11 + ", bQty12=" + bQty12 + ", bQty13=" + bQty13 + ", bQty14=" + bQty14 + ", bQty15=" + bQty15 + ", bQty16=" + bQty16 + ", bQty17=" + bQty17 + ", bQty18=" + bQty18 + ", bQty19=" + bQty19 + ", bQty20=" + bQty20 + ", bQty21=" + bQty21 + ", bQty22=" + bQty22 + ", bQty23=" + bQty23 + ", bQty24=" + bQty24 + ", branch=" + branch + '}';
+    }
+
 }

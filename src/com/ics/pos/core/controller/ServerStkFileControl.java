@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import util.DateConvert;
 
 public class ServerStkFileControl {
 
@@ -71,61 +72,87 @@ public class ServerStkFileControl {
         return bean;
     }
 
-    public STKFileBean saveNewData(String bpCode, String branchCode, String stockCode) {
-        STKFileBean stkFileBean = null;
+//    public STKFileBean saveNewData(String bpCode, String branchCode, String stockCode) {
+    public STKFileBean saveNewData(STKFileBean bean) {
         try {
-            mysqlServer.open();
-            String sql = "insert ignore stkfile (bpcode,bstk, branch) values(?, ?, ?)";
-            PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
-            pstmt.setString(1, bpCode);
-            pstmt.setString(2, stockCode);
-            pstmt.setString(3, branchCode);
-            if (pstmt.executeUpdate() > 0) {
-                stkFileBean = new STKFileBean();
-                stkFileBean.setbPcode(bpCode);
-                stkFileBean.setbStk(stockCode);
-                stkFileBean.setbQty(0);
-                stkFileBean.setbAmt(0);
-                stkFileBean.setbTotalAmt(0);
-                stkFileBean.setbQty0(0);
-                stkFileBean.setbQty1(0);
-                stkFileBean.setbQty2(0);
-                stkFileBean.setbQty3(0);
-                stkFileBean.setbQty4(0);
-                stkFileBean.setbQty5(0);
-                stkFileBean.setbQty6(0);
-                stkFileBean.setbQty7(0);
-                stkFileBean.setbQty8(0);
-                stkFileBean.setbQty9(0);
-                stkFileBean.setbQty10(0);
-                stkFileBean.setbQty11(0);
-                stkFileBean.setbQty12(0);
-                stkFileBean.setbQty13(0);
-                stkFileBean.setbQty14(0);
-                stkFileBean.setbQty15(0);
-                stkFileBean.setbQty16(0);
-                stkFileBean.setbQty17(0);
-                stkFileBean.setbQty18(0);
-                stkFileBean.setbQty19(0);
-                stkFileBean.setbQty20(0);
-                stkFileBean.setbQty21(0);
-                stkFileBean.setbQty22(0);
-                stkFileBean.setbQty23(0);
-                stkFileBean.setbQty24(0);
-                stkFileBean.setBranch(branchCode);
-                System.err.println("Save New Stkfle : bpcode = " + stkFileBean.getbPcode() + " And Branch = " + stkFileBean.getBranch());
+            DateConvert dc = new DateConvert();
+            if (bean != null) {
+                MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
+                mysqlServer.open();
+                String sql = "insert ignore into stkfile (bpcode,bstk,bqty,bamt,"
+                        + "bqty0,bqty1,bqty2,bqty3,bqty4,"
+                        + "bqty5,bqty6,bqty7,bqty8,bqty9,"
+                        + "bqty10,bqty11,bqty12,bqty13,bqty14,"
+                        + "bqty15,bqty16,bqty17,bqty18,bqty19,"
+                        + "bqty20,bqty21,bqty22,bqty23,bqty24,"
+                        + "branch,lastupdate,lasttimeupdate,sendtopos)values("
+                        + "?, ?, ?, ?, ?,"
+                        + "?, ?, ?, ?, ?,"
+                        + "?, ?, ?, ?, ?,"
+                        + "?, ?, ?, ?, ?,"
+                        + "?, ?, ?, ?, ?,"
+                        + "?, ?, ?, ?, ?,"
+                        + "?, ?, ?"
+                        + ")";
+                PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
+                pstmt.setString(1, bean.getbPcode());
+                pstmt.setString(2, bean.getbStk());
+                pstmt.setDouble(3, bean.getbQty());
+                pstmt.setDouble(4, bean.getbAmt());
+                pstmt.setDouble(5, bean.getbQty0());
+                pstmt.setDouble(6, bean.getbQty1());
+                pstmt.setDouble(7, bean.getbQty2());
+                pstmt.setDouble(8, bean.getbQty3());
+                pstmt.setDouble(9, bean.getbQty4());
+                pstmt.setDouble(10, bean.getbQty5());
+                pstmt.setDouble(11, bean.getbQty6());
+                pstmt.setDouble(12, bean.getbQty7());
+                pstmt.setDouble(13, bean.getbQty8());
+                pstmt.setDouble(14, bean.getbQty9());
+                pstmt.setDouble(15, bean.getbQty10());
+                pstmt.setDouble(16, bean.getbQty11());
+                pstmt.setDouble(17, bean.getbQty12());
+                pstmt.setDouble(18, bean.getbQty13());
+                pstmt.setDouble(19, bean.getbQty14());
+                pstmt.setDouble(20, bean.getbQty15());
+                pstmt.setDouble(21, bean.getbQty16());
+                pstmt.setDouble(22, bean.getbQty17());
+                pstmt.setDouble(23, bean.getbQty18());
+                pstmt.setDouble(24, bean.getbQty19());
+                pstmt.setDouble(25, bean.getbQty20());
+                pstmt.setDouble(26, bean.getbQty21());
+                pstmt.setDouble(27, bean.getbQty22());
+                pstmt.setDouble(28, bean.getbQty23());
+                pstmt.setDouble(29, bean.getbQty24());
+                pstmt.setString(30, bean.getBranch());
+                pstmt.setString(31, dc.GetCurrentDate());
+                pstmt.setString(32, dc.GetCurrentTime());
+                pstmt.setString(33, "N");
+
+                if (pstmt.executeUpdate() > 0) {
+                    System.err.println("Save New Stkfle : bpcode = " + bean.getbPcode() + " And Branch = " + bean.getBranch());
+                } else {
+                    System.err.println("Cannot Add new Stkfile Server Because : bean is null");
+                }
+                mysqlServer.close();
             }
+
         } catch (SQLException ex) {
             Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             mysqlServer.close();
         }
 
-        return stkFileBean;
+        return bean;
     }
 
     public void updateData(STKFileBean stkFileBean, String lastUpdate, String lastTimeUpdate) {
         try {
+            if (stkFileBean.getbPcode().equals("KL500-02-39")) {
+                System.out.println("StkfileServer Bean " + stkFileBean);
+                System.out.println("TEST DEBUG IS NULL ...............................");
+                System.out.println("TEST DEBUG IS NULL ...............................");
+            }
             mysqlServer.open();
             String sql = "update stkfile set "
                     + "bqty=?, bamt=?, btotalamt=?, "
@@ -171,7 +198,7 @@ public class ServerStkFileControl {
             pstmt.setString(32, stkFileBean.getbPcode());
             pstmt.setString(33, stkFileBean.getBranch());
             pstmt.executeUpdate();
-            System.out.println("Processing UIpdate stkfile bpcode : " + stkFileBean.getbPcode());
+            System.out.println("Processing UIpdate stkfileServer bpcode : " + stkFileBean.getbPcode());
         } catch (SQLException ex) {
             Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
