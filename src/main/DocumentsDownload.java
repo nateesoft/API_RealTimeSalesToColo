@@ -43,33 +43,34 @@ public class DocumentsDownload extends javax.swing.JFrame {
     private void receiveDocuments(Connection mysqlLocal, Connection mysqlWeb) {
         try {
             List<STCardBean> listSTCardNotSend = new ArrayList();
-            listSTCardNotSend.clear();
             String sql = "select * from stcard "
                     + "where s_bran='" + branchBean.getCode() + "' "
                     + "and data_sync='N' and "
                     + "Source_data='WEB' "
                     + "order by s_date,s_no,s_que ";
-            ResultSet rs = mysqlWeb.createStatement().executeQuery(sql);
-            while (rs.next()) {
-                STCardBean bean = new STCardBean();
-                bean.setS_No(rs.getString("S_NO"));
-                bean.setS_Que(rs.getInt("S_Que"));
-                bean.setS_PCode(rs.getString("S_Pcode"));
-                bean.setS_In(rs.getInt("S_In"));
-                bean.setS_InCost(rs.getInt("S_Incost"));
-                bean.setS_Out(rs.getInt("S_Out"));
-                bean.setS_OutCost(rs.getInt("S_Outcost"));
-                bean.setS_Rem(rs.getString("S_Rem"));
-                bean.setS_User(rs.getString("S_User"));
-                bean.setS_EntryDate(rs.getString("S_Entrydate"));
-                bean.setS_EntryTime(rs.getString("S_Entrytime"));
-                bean.setDataSync(rs.getString("Data_Sync"));
-                bean.setSource_Data(rs.getString("Source_data"));
-                bean.setNettotal(rs.getInt("nettotal"));
-                listSTCardNotSend.add(bean);
+            try (java.sql.Statement stmt = mysqlWeb.createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
+                while (rs.next()) {
+                    STCardBean bean = new STCardBean();
+                    bean.setS_No(rs.getString("S_NO"));
+                    bean.setS_Que(rs.getInt("S_Que"));
+                    bean.setS_PCode(rs.getString("S_Pcode"));
+                    bean.setS_In(rs.getInt("S_In"));
+                    bean.setS_InCost(rs.getInt("S_Incost"));
+                    bean.setS_Out(rs.getInt("S_Out"));
+                    bean.setS_OutCost(rs.getInt("S_Outcost"));
+                    bean.setS_Rem(rs.getString("S_Rem"));
+                    bean.setS_User(rs.getString("S_User"));
+                    bean.setS_EntryDate(rs.getString("S_Entrydate"));
+                    bean.setS_EntryTime(rs.getString("S_Entrytime"));
+                    bean.setDataSync(rs.getString("Data_Sync"));
+                    bean.setSource_Data(rs.getString("Source_data"));
+                    bean.setNettotal(rs.getInt("nettotal"));
+                    listSTCardNotSend.add(bean);
+                }
             }
             if (!listSTCardNotSend.isEmpty()) {
-                for (int i = 0; i <= listSTCardNotSend.size(); i++) {
+                for (int i = 0; i < listSTCardNotSend.size(); i++) {
                     String sqlInsLoccal = "";
                     boolean checkDoc = false;
                     if (listSTCardNotSend.get(i).getS_Rem().equals("TRI_HQ")) {
@@ -113,13 +114,16 @@ public class DocumentsDownload extends javax.swing.JFrame {
         boolean docInCase = false;
 
         try {
-            String sql = "select r_no from tranin where r_no='" + s_no + "';";
-            ResultSet rs = mysqlLocal.createStatement().executeQuery(sql);
-            if (rs.next()) {
-                docInCase = true;
-                System.out.println("เอกสารนี้มีอยู่ในระบบอยู่แล้ว กรุณาแจ้งสำนักงานใหญ่ ให้ออกเอกสารใหม่");
+            String sql = "select r_no from tranin where r_no=?";
+            try (java.sql.PreparedStatement ps = mysqlLocal.prepareStatement(sql)) {
+                ps.setString(1, s_no);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        docInCase = true;
+                        System.out.println("เอกสารนี้มีอยู่ในระบบอยู่แล้ว กรุณาแจ้งสำนักงานใหญ่ ให้ออกเอกสารใหม่");
+                    }
+                }
             }
-
         } catch (SQLException e) {
             AppLogUtil.log(this.getClass(), "error", e);
         }

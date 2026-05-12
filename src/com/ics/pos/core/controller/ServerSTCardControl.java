@@ -23,6 +23,7 @@ public class ServerSTCardControl {
             + "values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
     public static class STCardUploadParam {
+
         public final STCardBean bean;
         public final double discount;
         public final double nettotal;
@@ -56,63 +57,79 @@ public class ServerSTCardControl {
             return results;
         }
 
+        Connection conn = null;
         try {
             mysqlServer.open();
-            Connection conn = mysqlServer.getConnection();
+            conn = mysqlServer.getConnection();
             conn.setAutoCommit(false);
 
-            PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL);
-            int chunkStart = 0;
+            try (PreparedStatement pstmt = conn.prepareStatement(INSERT_SQL)) {
+                int chunkStart = 0;
 
-            for (int i = 0; i < params.size(); i++) {
-                STCardUploadParam p = params.get(i);
-                STCardBean bean = p.bean;
-                pstmt.setString(1, bean.getS_Date());
-                pstmt.setString(2, bean.getS_No());
-                pstmt.setString(3, bean.getS_SubNo());
-                pstmt.setInt(4, bean.getS_Que());
-                pstmt.setString(5, bean.getS_PCode());
-                pstmt.setString(6, bean.getS_Stk());
-                pstmt.setDouble(7, bean.getS_In());
-                pstmt.setDouble(8, bean.getS_Out());
-                pstmt.setDouble(9, bean.getS_InCost());
-                pstmt.setDouble(10, bean.getS_OutCost());
-                pstmt.setDouble(11, bean.getS_ACost());
-                pstmt.setString(12, bean.getS_Rem());
-                pstmt.setString(13, bean.getS_User());
-                pstmt.setString(14, bean.getS_EntryDate());
-                pstmt.setString(15, bean.getS_EntryTime());
-                pstmt.setString(16, bean.getS_Link());
-                pstmt.setString(17, p.branchCode);
-                pstmt.setDouble(18, p.discount);
-                pstmt.setDouble(19, p.nettotal);
-                pstmt.setString(20, p.refund);
-                pstmt.setString(21, p.refno);
-                pstmt.setString(22, p.cashier);
-                pstmt.setString(23, p.emp);
-                pstmt.setDouble(24, p.unitPrice);
-                pstmt.addBatch();
+                for (int i = 0; i < params.size(); i++) {
+                    STCardUploadParam p = params.get(i);
+                    STCardBean bean = p.bean;
+                    pstmt.setString(1, bean.getS_Date());
+                    pstmt.setString(2, bean.getS_No());
+                    pstmt.setString(3, bean.getS_SubNo());
+                    pstmt.setInt(4, bean.getS_Que());
+                    pstmt.setString(5, bean.getS_PCode());
+                    pstmt.setString(6, bean.getS_Stk());
+                    pstmt.setDouble(7, bean.getS_In());
+                    pstmt.setDouble(8, bean.getS_Out());
+                    pstmt.setDouble(9, bean.getS_InCost());
+                    pstmt.setDouble(10, bean.getS_OutCost());
+                    pstmt.setDouble(11, bean.getS_ACost());
+                    pstmt.setString(12, bean.getS_Rem());
+                    pstmt.setString(13, bean.getS_User());
+                    pstmt.setString(14, bean.getS_EntryDate());
+                    pstmt.setString(15, bean.getS_EntryTime());
+                    pstmt.setString(16, bean.getS_Link());
+                    pstmt.setString(17, p.branchCode);
+                    pstmt.setDouble(18, p.discount);
+                    pstmt.setDouble(19, p.nettotal);
+                    pstmt.setString(20, p.refund);
+                    pstmt.setString(21, p.refno);
+                    pstmt.setString(22, p.cashier);
+                    pstmt.setString(23, p.emp);
+                    pstmt.setDouble(24, p.unitPrice);
+                    pstmt.addBatch();
 
-                boolean flushNow = ((i - chunkStart + 1) >= BATCH_CHUNK_SIZE) || (i == params.size() - 1);
-                if (flushNow) {
-                    try {
-                        int[] batchResults = pstmt.executeBatch();
-                        conn.commit();
-                        for (int j = 0; j < batchResults.length; j++) {
-                            results[chunkStart + j] = batchResults[j] != Statement.EXECUTE_FAILED;
+                    boolean flushNow = ((i - chunkStart + 1) >= BATCH_CHUNK_SIZE) || (i == params.size() - 1);
+                    if (flushNow) {
+                        try {
+                            int[] batchResults = pstmt.executeBatch();
+                            conn.commit();
+                            for (int j = 0; j < batchResults.length; j++) {
+                                results[chunkStart + j] = batchResults[j] != Statement.EXECUTE_FAILED;
+                            }
+                        } catch (BatchUpdateException bue) {
+                            conn.rollback();
+                            AppLogUtil.error(getClass(), bue.getMessage(), bue);
                         }
-                    } catch (BatchUpdateException bue) {
-                        conn.rollback();
-                        AppLogUtil.error(getClass(), bue.getMessage(), bue);
+                        pstmt.clearBatch();
+                        chunkStart = i + 1;
                     }
-                    pstmt.clearBatch();
-                    chunkStart = i + 1;
                 }
             }
 
         } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException re) {
+                    AppLogUtil.error(getClass(), re.getMessage(), re);
+                }
+            }
             AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    AppLogUtil.error(getClass(), e.getMessage(), e);
+                }
+            }
             mysqlServer.close();
         }
 

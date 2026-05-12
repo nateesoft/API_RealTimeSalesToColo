@@ -19,8 +19,8 @@ public class BranchControl {
         try {
             mysqlLocal.open();
             String sql = "select * from branch limit 1";
-            PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-            try (ResultSet rs = psmtQuery.executeQuery()) {
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
+                 ResultSet rs = psmtQuery.executeQuery()) {
                 if (rs.next()) {
                     branchBean = new BranchBean();
                     String bCheck;

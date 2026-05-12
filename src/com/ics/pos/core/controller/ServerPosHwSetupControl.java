@@ -16,13 +16,14 @@ public class ServerPosHwSetupControl {
                     + "Lastupdate=?, "
                     + "LastTimeUpdate=? "
                     + "where branch=? and terminal=?";
-            PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql);
-            pstmt.setString(1, receNo1);
-            pstmt.setString(2, lastupdate);
-            pstmt.setString(3, lastTimeUpdate);
-            pstmt.setString(4, branchCode);
-            pstmt.setString(5, terminal);
-            pstmt.executeUpdate();
+            try (PreparedStatement pstmt = mysqlServer.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, receNo1);
+                pstmt.setString(2, lastupdate);
+                pstmt.setString(3, lastTimeUpdate);
+                pstmt.setString(4, branchCode);
+                pstmt.setString(5, terminal);
+                pstmt.executeUpdate();
+            }
         } catch (SQLException e) {
             AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {

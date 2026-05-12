@@ -18,11 +18,12 @@ public class LocalProductControl {
             mysqlLocal.open();
             String sql = "select pscost, pacost, plcost "
                     + "from product where pcode = ?";
-            PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-            psmtQuery.setString(1, pCode);
-            try (ResultSet rs = psmtQuery.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getDouble("pscost");
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql)) {
+                psmtQuery.setString(1, pCode);
+                try (ResultSet rs = psmtQuery.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getDouble("pscost");
+                    }
                 }
             }
         } catch (SQLException e) {

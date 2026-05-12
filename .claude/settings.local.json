@@ -3,7 +3,9 @@
     "allow": [
       "Bash(grep:*)",
       "Bash(find:*)",
-      "Bash(java -version)"
+      "Bash(java -version)",
+      "Bash(ant compile *)",
+      "Bash(javac -version)"
     ]
   }
 }

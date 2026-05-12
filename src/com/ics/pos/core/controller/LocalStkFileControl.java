@@ -22,8 +22,8 @@ public class LocalStkFileControl {
         try {
             mysqlLocal.open();
             String sql = "select * from stkfile";
-            PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-            try (ResultSet rs = psmtQuery.executeQuery()) {
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
+                 ResultSet rs = psmtQuery.executeQuery()) {
                 while (rs.next()) {
                     STKFileBean bean = new STKFileBean();
                     bean.setbPcode(rs.getString("BPCode"));
@@ -76,42 +76,43 @@ public class LocalStkFileControl {
         try {
             mysqlLocal.open();
             String sql = "select * from stkfile where bpcode=? limit 1";
-            PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-            psmtQuery.setString(1, bpCode);
-            try (ResultSet rs = psmtQuery.executeQuery()) {
-                if (rs.next()) {
-                    bean = new STKFileBean();
-                    bean.setbPcode(rs.getString("BPCode"));
-                    bean.setbStk(rs.getString("BStk"));
-                    bean.setbQty(rs.getDouble("BQty"));
-                    bean.setbAmt(rs.getDouble("BAmt"));
-                    bean.setbTotalAmt(rs.getDouble("BTotalAmt"));
-                    bean.setbQty0(rs.getDouble("BQty0"));
-                    bean.setbQty1(rs.getDouble("BQty1"));
-                    bean.setbQty2(rs.getDouble("BQty2"));
-                    bean.setbQty3(rs.getDouble("BQty3"));
-                    bean.setbQty4(rs.getDouble("BQty4"));
-                    bean.setbQty5(rs.getDouble("BQty5"));
-                    bean.setbQty6(rs.getDouble("BQty6"));
-                    bean.setbQty7(rs.getDouble("BQty7"));
-                    bean.setbQty8(rs.getDouble("BQty8"));
-                    bean.setbQty9(rs.getDouble("BQty9"));
-                    bean.setbQty10(rs.getDouble("BQty10"));
-                    bean.setbQty11(rs.getDouble("BQty11"));
-                    bean.setbQty12(rs.getDouble("BQty12"));
-                    bean.setbQty13(rs.getDouble("BQty13"));
-                    bean.setbQty14(rs.getDouble("BQty14"));
-                    bean.setbQty15(rs.getDouble("BQty15"));
-                    bean.setbQty16(rs.getDouble("BQty16"));
-                    bean.setbQty17(rs.getDouble("BQty17"));
-                    bean.setbQty18(rs.getDouble("BQty18"));
-                    bean.setbQty19(rs.getDouble("BQty19"));
-                    bean.setbQty20(rs.getDouble("BQty20"));
-                    bean.setbQty21(rs.getDouble("BQty21"));
-                    bean.setbQty22(rs.getDouble("BQty22"));
-                    bean.setbQty23(rs.getDouble("BQty23"));
-                    bean.setbQty24(rs.getDouble("BQty24"));
-                    bean.setBranch(rs.getString("Branch"));
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql)) {
+                psmtQuery.setString(1, bpCode);
+                try (ResultSet rs = psmtQuery.executeQuery()) {
+                    if (rs.next()) {
+                        bean = new STKFileBean();
+                        bean.setbPcode(rs.getString("BPCode"));
+                        bean.setbStk(rs.getString("BStk"));
+                        bean.setbQty(rs.getDouble("BQty"));
+                        bean.setbAmt(rs.getDouble("BAmt"));
+                        bean.setbTotalAmt(rs.getDouble("BTotalAmt"));
+                        bean.setbQty0(rs.getDouble("BQty0"));
+                        bean.setbQty1(rs.getDouble("BQty1"));
+                        bean.setbQty2(rs.getDouble("BQty2"));
+                        bean.setbQty3(rs.getDouble("BQty3"));
+                        bean.setbQty4(rs.getDouble("BQty4"));
+                        bean.setbQty5(rs.getDouble("BQty5"));
+                        bean.setbQty6(rs.getDouble("BQty6"));
+                        bean.setbQty7(rs.getDouble("BQty7"));
+                        bean.setbQty8(rs.getDouble("BQty8"));
+                        bean.setbQty9(rs.getDouble("BQty9"));
+                        bean.setbQty10(rs.getDouble("BQty10"));
+                        bean.setbQty11(rs.getDouble("BQty11"));
+                        bean.setbQty12(rs.getDouble("BQty12"));
+                        bean.setbQty13(rs.getDouble("BQty13"));
+                        bean.setbQty14(rs.getDouble("BQty14"));
+                        bean.setbQty15(rs.getDouble("BQty15"));
+                        bean.setbQty16(rs.getDouble("BQty16"));
+                        bean.setbQty17(rs.getDouble("BQty17"));
+                        bean.setbQty18(rs.getDouble("BQty18"));
+                        bean.setbQty19(rs.getDouble("BQty19"));
+                        bean.setbQty20(rs.getDouble("BQty20"));
+                        bean.setbQty21(rs.getDouble("BQty21"));
+                        bean.setbQty22(rs.getDouble("BQty22"));
+                        bean.setbQty23(rs.getDouble("BQty23"));
+                        bean.setbQty24(rs.getDouble("BQty24"));
+                        bean.setBranch(rs.getString("Branch"));
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -128,42 +129,43 @@ public class LocalStkFileControl {
         try {
             mysqlLocal.open();
             String sql = "insert ignore into stkfile (bpcode, branch) values(?, ?)";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, bpCode);
-            pstmt.setString(2, branchCode);
-            if (pstmt.executeUpdate() > 0) {
-                stkFileBean = new STKFileBean();
-                stkFileBean.setbPcode(bpCode);
-                stkFileBean.setbStk(stockCode);
-                stkFileBean.setbQty(0);
-                stkFileBean.setbAmt(0);
-                stkFileBean.setbTotalAmt((0));
-                stkFileBean.setbQty0((0));
-                stkFileBean.setbQty1((0));
-                stkFileBean.setbQty2((0));
-                stkFileBean.setbQty3((0));
-                stkFileBean.setbQty4((0));
-                stkFileBean.setbQty5((0));
-                stkFileBean.setbQty6((0));
-                stkFileBean.setbQty7((0));
-                stkFileBean.setbQty8((0));
-                stkFileBean.setbQty9((0));
-                stkFileBean.setbQty10((0));
-                stkFileBean.setbQty11((0));
-                stkFileBean.setbQty12((0));
-                stkFileBean.setbQty13((0));
-                stkFileBean.setbQty14((0));
-                stkFileBean.setbQty15((0));
-                stkFileBean.setbQty16((0));
-                stkFileBean.setbQty17((0));
-                stkFileBean.setbQty18((0));
-                stkFileBean.setbQty19((0));
-                stkFileBean.setbQty20((0));
-                stkFileBean.setbQty21((0));
-                stkFileBean.setbQty22((0));
-                stkFileBean.setbQty23((0));
-                stkFileBean.setbQty24((0));
-                stkFileBean.setBranch(branchCode);
+            try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, bpCode);
+                pstmt.setString(2, branchCode);
+                if (pstmt.executeUpdate() > 0) {
+                    stkFileBean = new STKFileBean();
+                    stkFileBean.setbPcode(bpCode);
+                    stkFileBean.setbStk(stockCode);
+                    stkFileBean.setbQty(0);
+                    stkFileBean.setbAmt(0);
+                    stkFileBean.setbTotalAmt((0));
+                    stkFileBean.setbQty0((0));
+                    stkFileBean.setbQty1((0));
+                    stkFileBean.setbQty2((0));
+                    stkFileBean.setbQty3((0));
+                    stkFileBean.setbQty4((0));
+                    stkFileBean.setbQty5((0));
+                    stkFileBean.setbQty6((0));
+                    stkFileBean.setbQty7((0));
+                    stkFileBean.setbQty8((0));
+                    stkFileBean.setbQty9((0));
+                    stkFileBean.setbQty10((0));
+                    stkFileBean.setbQty11((0));
+                    stkFileBean.setbQty12((0));
+                    stkFileBean.setbQty13((0));
+                    stkFileBean.setbQty14((0));
+                    stkFileBean.setbQty15((0));
+                    stkFileBean.setbQty16((0));
+                    stkFileBean.setbQty17((0));
+                    stkFileBean.setbQty18((0));
+                    stkFileBean.setbQty19((0));
+                    stkFileBean.setbQty20((0));
+                    stkFileBean.setbQty21((0));
+                    stkFileBean.setbQty22((0));
+                    stkFileBean.setbQty23((0));
+                    stkFileBean.setbQty24((0));
+                    stkFileBean.setBranch(branchCode);
+                }
             }
         } catch (SQLException e) {
             AppLogUtil.error(getClass(), e.getMessage(), e);
@@ -180,11 +182,12 @@ public class LocalStkFileControl {
             String sql = "update stkfile set "
                     + "Lastupdate=?, "
                     + "LastTimeUpdate=? where bpcode=?";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, currentData);
-            pstmt.setString(2, currentTime);
-            pstmt.setString(3, bPcode);
-            pstmt.executeUpdate();
+            try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, currentData);
+                pstmt.setString(2, currentTime);
+                pstmt.setString(3, bPcode);
+                pstmt.executeUpdate();
+            }
         } catch (SQLException e) {
             AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {

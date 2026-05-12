@@ -19,11 +19,12 @@ public class LocalPosHwSetupControl {
             String sql = "select ReceNo1 from poshwsetup "
                     + "where terminal=? "
                     + "limit 1";
-            PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-            psmtQuery.setString(1, terminal);
-            try (ResultSet rs = psmtQuery.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("ReceNo1");
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql)) {
+                psmtQuery.setString(1, terminal);
+                try (ResultSet rs = psmtQuery.executeQuery()) {
+                    if (rs.next()) {
+                        return rs.getString("ReceNo1");
+                    }
                 }
             }
         } catch (SQLException e) {

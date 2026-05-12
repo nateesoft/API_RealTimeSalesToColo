@@ -662,7 +662,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             mysqlServer.open();
 
             String sql = "select * from t_sale where r_refund='V';";
-            try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
+            try (java.sql.Statement stmt = mysqlLocal.getConnection().createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
                 List<STCardBean> listBean = new ArrayList<>();
                 while (rs.next()) {
                     STCardBean bean = new STCardBean();

@@ -30,27 +30,29 @@ public class LocalTSaleControl {
                     + "AND r_plucode=? AND r_date=? "
                     + "AND r_time=? "
                     + "AND r_void='V' LIMIT 1";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, macno);
-            pstmt.setString(2, refno);
-            pstmt.setString(3, s_PCode);
-            pstmt.setString(4, s_Date);
-            pstmt.setString(5, r_Time);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                bean = new STCardBean();
-                if (rs.getDouble("R_Total") != rs.getDouble("R_Nettotal")) {
-                    bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
-                } else {
-                    bean.setDiscount(0);
-                }
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
-                    bean.setNettotal(0);
+            try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, macno);
+                pstmt.setString(2, refno);
+                pstmt.setString(3, s_PCode);
+                pstmt.setString(4, s_Date);
+                pstmt.setString(5, r_Time);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        bean = new STCardBean();
+                        if (rs.getDouble("R_Total") != rs.getDouble("R_Nettotal")) {
+                            bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
+                        } else {
+                            bean.setDiscount(0);
+                        }
+                        bean.setNettotal(rs.getDouble("R_Nettotal"));
+                        bean.setRefund(rs.getString("R_Refund"));
+                        bean.setRefNo(rs.getString("R_Refno"));
+                        bean.setCashier(rs.getString("Cashier"));
+                        bean.setEmp(rs.getString("R_Emp"));
+                        if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
+                            bean.setNettotal(0);
+                        }
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -61,10 +63,10 @@ public class LocalTSaleControl {
 
         return bean;
     }
-    
+
     public STCardBean getDataByPluCodeRdateRTimeRVoid(String s_PCode, String s_Date, String r_time) {
         STCardBean bean = null;
-        
+
         try {
             mysqlLocal.open();
             String sql = "select r_refno, r_total, r_nettotal, r_pramt, r_discbath,"
@@ -72,26 +74,27 @@ public class LocalTSaleControl {
                     + "from t_sale where r_plucode=? "
                     + "and r_date=? and r_time=? and r_void<>'V' "
                     + "limit 1;";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, s_PCode);
-            pstmt.setString(2, s_Date);
-            pstmt.setString(3, r_time);
-            
-            ResultSet rs = pstmt.executeQuery();
-            if(rs.next()){
-                bean = new STCardBean();
-                if (rs.getDouble("R_Total") != rs.getDouble("R_Nettotal")) {
-                    bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
-                } else {
-                    bean.setDiscount(0);
-                }
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
-                    bean.setNettotal(0);
+            try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, s_PCode);
+                pstmt.setString(2, s_Date);
+                pstmt.setString(3, r_time);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        bean = new STCardBean();
+                        if (rs.getDouble("R_Total") != rs.getDouble("R_Nettotal")) {
+                            bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
+                        } else {
+                            bean.setDiscount(0);
+                        }
+                        bean.setNettotal(rs.getDouble("R_Nettotal"));
+                        bean.setRefund(rs.getString("R_Refund"));
+                        bean.setRefNo(rs.getString("R_Refno"));
+                        bean.setCashier(rs.getString("Cashier"));
+                        bean.setEmp(rs.getString("R_Emp"));
+                        if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
+                            bean.setNettotal(0);
+                        }
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -99,11 +102,11 @@ public class LocalTSaleControl {
         } finally {
             mysqlLocal.close();
         }
-        
+
         return bean;
     }
-    
-    public STCardBean getDataByMacnoRTimeRDatePluCodeRVoid(String macno, String r_newTime, 
+
+    public STCardBean getDataByMacnoRTimeRDatePluCodeRVoid(String macno, String r_newTime,
             String s_PCode, String s_Date, boolean voidFlag) {
 
         STCardBean bean = null;
@@ -120,28 +123,28 @@ public class LocalTSaleControl {
                 sql += " and r_void <> 'V' ";
             }
             sql += " limit 1";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, macno);
-            pstmt.setString(2, r_newTime);
-            pstmt.setString(3, s_PCode);
-            pstmt.setString(4, s_Date);
-            
-            ResultSet rs = pstmt.executeQuery();
-            if(rs.next()) {
-                bean = new STCardBean();
-                if (rs.getDouble("R_Total") < 0) {
-                    bean.setDiscount((rs.getDouble("R_Total") + rs.getDouble("R_Nettotal")));
-                } else {
-                    bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
-                }
-
-                bean.setNettotal(rs.getDouble("R_Nettotal"));
-                bean.setRefund(rs.getString("R_Refund"));
-                bean.setRefNo(rs.getString("R_Refno"));
-                bean.setCashier(rs.getString("Cashier"));
-                bean.setEmp(rs.getString("R_Emp"));
-                if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
-                    bean.setNettotal(0);
+            try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, macno);
+                pstmt.setString(2, r_newTime);
+                pstmt.setString(3, s_PCode);
+                pstmt.setString(4, s_Date);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    if (rs.next()) {
+                        bean = new STCardBean();
+                        if (rs.getDouble("R_Total") < 0) {
+                            bean.setDiscount((rs.getDouble("R_Total") + rs.getDouble("R_Nettotal")));
+                        } else {
+                            bean.setDiscount((rs.getDouble("R_Total") - rs.getDouble("R_Nettotal")));
+                        }
+                        bean.setNettotal(rs.getDouble("R_Nettotal"));
+                        bean.setRefund(rs.getString("R_Refund"));
+                        bean.setRefNo(rs.getString("R_Refno"));
+                        bean.setCashier(rs.getString("Cashier"));
+                        bean.setEmp(rs.getString("R_Emp"));
+                        if (bean.getS_OutCost() < 0 && bean.getS_InCost() == 0 && bean.getNettotal() == -1) {
+                            bean.setNettotal(0);
+                        }
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -149,7 +152,7 @@ public class LocalTSaleControl {
         } finally {
             mysqlLocal.close();
         }
-        
+
         return bean;
     }
     
@@ -160,7 +163,8 @@ public class LocalTSaleControl {
             mysqlLocal.open();
             
             String sql = "select * from t_sale where r_send='N' order by r_refno, r_index;";
-            try (ResultSet rs = mysqlLocal.getConnection().createStatement().executeQuery(sql)) {
+            try (java.sql.Statement stmt = mysqlLocal.getConnection().createStatement();
+                 ResultSet rs = stmt.executeQuery(sql)) {
                 while (rs.next()) {
                     STCardBean bean = new STCardBean();
                     bean.setS_Date(rs.getString("R_Date"));
