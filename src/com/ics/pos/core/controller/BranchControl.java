@@ -6,8 +6,7 @@ import database.MySQLConnect;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 public class BranchControl {
     private final MySQLConnect mysqlLocal = new MySQLConnect();
@@ -35,7 +34,7 @@ public class BranchControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(BranchControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }

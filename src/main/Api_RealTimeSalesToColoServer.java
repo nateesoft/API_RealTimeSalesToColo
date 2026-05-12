@@ -54,9 +54,8 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     public Api_RealTimeSalesToColoServer() {
         initComponents();
-        setState(JFrame.ICONIFIED);
 
-        System.out.println("Loop For Upload Stcard/Stkfile Update");
+        AppLogUtil.info(getClass(), "=== Api_RealTimeSalesToColoServer เริ่มต้นระบบ ===");
         btnUpload.setText(getCurrentTime());
         lblBranch.setText("กำลังตรวจสอบการเชื่อมต่อ MySQL...");
         btnStatus.setText("รอการเชื่อมต่อ...");
@@ -85,13 +84,23 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
                 final boolean localStatus = localOk;
                 final boolean webStatus = webOk;
-                System.out.println("Attempt " + currentAttempt
-                        + " | Local MySQL: " + (localOk ? "OK" : "FAIL")
-                        + " | Web MySQL: " + (webOk ? "OK" : "FAIL"));
+                String connLog = "Attempt " + currentAttempt
+                        + " | Local: " + (localOk ? "OK" : "FAIL")
+                        + " | Web: " + (webOk ? "OK" : "FAIL");
+                if (localOk && webOk) {
+                    AppLogUtil.info(getClass(), connLog);
+                } else {
+                    AppLogUtil.warning(getClass(), connLog);
+                }
 
                 if (localOk && webOk) {
                     branchBean = new BranchControl().getData();
                     final BranchBean bean = branchBean;
+                    if (bean != null) {
+                        AppLogUtil.info(getClass(), "MySQL เชื่อมต่อสำเร็จ | สาขา: " + bean.getCode());
+                    } else {
+                        AppLogUtil.warning(getClass(), "MySQL เชื่อมต่อสำเร็จ แต่ไม่พบข้อมูลสาขา");
+                    }
                     javax.swing.SwingUtilities.invokeLater(() -> {
                         if (bean != null) {
                             lblBranch.setText("รหัสสาขา : " + bean.getCode());
@@ -111,13 +120,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                                 + " | Web: " + (webStatus ? "OK" : "FAIL")
                                 + " | Retry in 5s...")
                 );
-
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
             }
         }, "MySQL-ConnectionCheck").start();
     }
@@ -134,6 +136,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 return conn != null;
             }
         } catch (Exception e) {
+            AppLogUtil.error(getClass(), "Local MySQL connect ล้มเหลว: " + e.getMessage(), e);
             return false;
         }
     }
@@ -142,7 +145,14 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         MySQLConnectWebOnline testConn = new MySQLConnectWebOnline();
         try {
             testConn.open();
-            return testConn.getConnection() != null;
+            boolean ok = testConn.getConnection() != null;
+            if (!ok) {
+                AppLogUtil.warning(getClass(), "Web MySQL connect ล้มเหลว: connection เป็น null");
+            }
+            return ok;
+        } catch (Exception e) {
+            AppLogUtil.error(getClass(), "Web MySQL connect ล้มเหลว: " + e.getMessage(), e);
+            return false;
         } finally {
             testConn.close();
         }
@@ -152,38 +162,37 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
      * เริ่มต้น ProcessController และตั้งเวลา upload ทุกๆ 5 นาที
      */
     private void initializeAndStartScheduler() {
-        // สร้าง Scheduler ด้วย single thread
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+        // สร้าง Scheduler ด้วย daemon thread เพื่อให้ JVM exit ได้เมื่อปิดหน้าต่าง
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "SchedulerUploadTask");
+            t.setDaemon(true);
+            return t;
+        });
+
+        AppLogUtil.info(getClass(), "Scheduler เริ่มต้น: upload ทุก " + UPLOAD_INTERVAL_MINUTES + " นาที | branch=" + branchBean.getCode());
 
         // Task ที่จะ run ทุกๆ 5 นาที
         Runnable uploadTask = () -> {
-            SwingUtilities.invokeLater(() -> txtLogMSG.setText("กำลังเข้าสู่ ลูบ การส่งข้อมูลครับ 5 นาที"));
-
-            // update last refno
-            uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), getCurrentTime(), branchBean.getCode());
+            String cycleTime = getCurrentTime();
+            AppLogUtil.info(getClass(), "--- Upload cycle เริ่มต้น [" + cycleTime + "] ---");
+            SwingUtilities.invokeLater(() -> txtLogMSG.setText("กำลังเข้าสู่รอบการส่งข้อมูล [" + cycleTime + "]"));
 
             try {
-                System.out.println("=== Scheduled upload started at: " + getCurrentTime() + " ===");
-
-                // upate stcard ไม่เอา S_Rem==SAL เนื่องจาก S_Rem==SAL จะต้องไปหาข้อมูล discount เพิ่มในตาราง T_Sale
+                uploadLastRefno(TERMINAL_FIXED, getCurrentDate(), cycleTime, branchBean.getCode());
                 uploadStcard();
-
                 updateStcardServerWithoutSALtype();
-
-                // อัพเดตย้อนหลังสำหรับรายการที่มีการ Void
                 uploadUpdateVoid();
 
-                SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + getCurrentTime()));
-                System.out.println("=== Scheduled upload completed ===");
+                String doneTime = getCurrentTime();
+                AppLogUtil.info(getClass(), "--- Upload cycle เสร็จสิ้น [" + doneTime + "] ---");
+                SwingUtilities.invokeLater(() -> btnStatus.setText("Last upload: " + doneTime));
             } catch (Exception e) {
-                AppLogUtil.log(this.getClass(), "error", e);
+                AppLogUtil.error(getClass(), "Upload cycle ล้มเหลว: " + e.getMessage(), e);
             }
         };
 
         // เริ่ม schedule: run ครั้งแรกทันที (0), แล้ว repeat ทุก 5 นาที
         scheduler.scheduleAtFixedRate(uploadTask, 0, UPLOAD_INTERVAL_MINUTES, TimeUnit.MINUTES);
-
-        System.out.println("Scheduler started: Upload every " + UPLOAD_INTERVAL_MINUTES + " minutes");
     }
 
     @SuppressWarnings("unchecked")
@@ -398,6 +407,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }//GEN-LAST:event_btnStatus2ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+        AppLogUtil.info(getClass(), "=== ระบบปิดตัว (Exit) ===");
         if (scheduler != null) {
             scheduler.shutdown();
         }
@@ -418,17 +428,20 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private void uploadStcard() {
         if (branchBean == null) {
+            AppLogUtil.warning(getClass(), "uploadStcard: branchBean เป็น null ข้ามไป");
             return;
         }
 
-        // prepare stcard to send data
         List<STCardBean> listSTCardNotSend = localStCard.getListSTCardNotSend();
         if (listSTCardNotSend.isEmpty()) {
+            AppLogUtil.info(getClass(), "uploadStcard: ไม่มีรายการ STCard ที่ยังไม่ส่ง");
             javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setEnabled(true));
             return;
         }
 
-        // Phase 1: compute all values and collect valid items for batch insert
+        AppLogUtil.info(getClass(), "uploadStcard: พบ " + listSTCardNotSend.size() + " รายการที่ยังไม่ส่ง");
+
+        // Phase 1: collect batch params
         List<ServerSTCardControl.STCardUploadParam> batchParams = new ArrayList<>();
         for (STCardBean stCardNotSend : listSTCardNotSend) {
             batchParams.add(new ServerSTCardControl.STCardUploadParam(
@@ -437,20 +450,27 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     stCardNotSend.getUnitPrice(), branchBean.getCode(), false));
         }
 
-        // Phase 2: batch insert all valid items to server (single connection)
+        // Phase 2: batch insert to server
         boolean[] results = serverSTCardControl.saveSTCardBatch(batchParams);
 
-        // Phase 3: update local flags based on batch results
+        // Phase 3: update local flags
+        int successCount = 0;
         for (int i = 0; i < batchParams.size(); i++) {
             if (results[i]) {
+                successCount++;
                 ServerSTCardControl.STCardUploadParam p = batchParams.get(i);
-                txtLogMSG.setText("กำลังดำเนินการส่งข้อมูล stcard i = " + i);
-
+                final int idx = i + 1;
+                final int total = batchParams.size();
+                AppLogUtil.info(getClass(), "STCard ส่งสำเร็จ [" + idx + "/" + total + "] pcode=" + p.bean.getS_PCode() + " refno=" + p.bean.getRefNo());
+                SwingUtilities.invokeLater(() -> txtLogMSG.setText("ส่ง STCard [" + idx + "/" + total + "] pcode=" + p.bean.getS_PCode()));
                 localStCard.updateSendStatus(p.bean, getCurrentDate(), getCurrentTime());
                 uploadStkfile(p.bean.getS_PCode());
+            } else {
+                AppLogUtil.warning(getClass(), "STCard ส่งไม่สำเร็จ index=" + i + " pcode=" + batchParams.get(i).bean.getS_PCode());
             }
         }
 
+        AppLogUtil.info(getClass(), "uploadStcard เสร็จสิ้น: สำเร็จ " + successCount + "/" + batchParams.size() + " รายการ");
         javax.swing.SwingUtilities.invokeLater(() -> btnStatus.setEnabled(true));
     }
 
@@ -459,43 +479,50 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
 
     private void uploadStkfile(String bpcode) {
         branchBean = new BranchControl().getData();
-        javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE Upload Process"));
 
-        if (bpcode != null && !bpcode.equals("")) {
+        if (bpcode != null && !bpcode.isEmpty()) {
+            AppLogUtil.info(getClass(), "uploadStkfile: pcode=" + bpcode);
+            javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE pcode=" + bpcode));
+
             STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
             if (stkFileBean == null) {
+                AppLogUtil.info(getClass(), "StkFile ไม่พบใน local สร้างใหม่ pcode=" + bpcode);
                 stkFileBean = localStkFile.saveNewData(bpcode, branchBean.getCode(), STOCK_CODE);
             }
 
-            // check update server
             if (stkFileBean != null) {
                 STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(bpcode, branchBean.getCode());
                 if (serverStkFileBean == null) {
+                    AppLogUtil.info(getClass(), "StkFile insert server ใหม่ pcode=" + bpcode);
                     serverStkFileControl.saveNewData(stkFileBean);
                 } else {
+                    AppLogUtil.info(getClass(), "StkFile update server pcode=" + bpcode);
                     serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
                 }
+            } else {
+                AppLogUtil.warning(getClass(), "uploadStkfile: ไม่สามารถสร้าง stkFileBean pcode=" + bpcode);
             }
         } else {
             List<STKFileBean> listStkFile = localStkFile.getAllData();
-            if (!listStkFile.isEmpty()) {
-                for (int i = 0; i < listStkFile.size(); i++) {
-                    STKFileBean stkFileBean = (STKFileBean) listStkFile.get(i);
-                    STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(stkFileBean.getbPcode(), stkFileBean.getBranch());
-                    try {
-                        if (serverStkFileBean == null) {
-                            serverStkFileControl.saveNewData(stkFileBean);
-                        }
-                    } catch (Exception e) {
-                        System.out.println(e.toString());
+            AppLogUtil.info(getClass(), "uploadStkfile (all): พบ " + listStkFile.size() + " รายการ");
+            javax.swing.SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE Upload All: " + listStkFile.size() + " รายการ"));
+
+            for (STKFileBean stkFileBean : listStkFile) {
+                STKFileBean serverStkFileBean = serverStkFileControl.getDataByBPCodeBranchCode(stkFileBean.getbPcode(), stkFileBean.getBranch());
+                try {
+                    if (serverStkFileBean == null) {
+                        AppLogUtil.info(getClass(), "StkFile insert server ใหม่ pcode=" + stkFileBean.getbPcode());
+                        serverStkFileControl.saveNewData(stkFileBean);
                     }
-
-                    serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
-
-                    // update local time for stkfile
-                    localStkFile.updateTimeData(stkFileBean.getbPcode(), getCurrentDate(), getCurrentTime());
+                } catch (Exception e) {
+                    AppLogUtil.error(getClass(), "StkFile saveNewData ล้มเหลว pcode=" + stkFileBean.getbPcode(), e);
                 }
+
+                serverStkFileControl.updateData(stkFileBean, getCurrentDate(), getCurrentTime());
+                localStkFile.updateTimeData(stkFileBean.getbPcode(), getCurrentDate(), getCurrentTime());
             }
+
+            AppLogUtil.info(getClass(), "uploadStkfile (all) เสร็จสิ้น");
         }
     }
 
@@ -505,11 +532,18 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private void uploadLastRefno(String terminal, String currentDate, String currentTime, String branchCode) {
         String receNo1 = poshwControl.getReceNo1ByTerminal(terminal);
         if (receNo1 != null) {
+            AppLogUtil.info(getClass(), "uploadLastRefno: terminal=" + terminal + " receNo1=" + receNo1);
             poshwServerControl.updateTime(receNo1, currentDate, currentTime, terminal, branchCode);
+        } else {
+            AppLogUtil.warning(getClass(), "uploadLastRefno: ไม่พบ receNo1 สำหรับ terminal=" + terminal);
         }
     }
 
     private void uploadSaleToSTCardSection(List<STCardBean> listBean) {
+        AppLogUtil.info(getClass(), "uploadSaleToSTCardSection: " + listBean.size() + " รายการ");
+        if (listBean.isEmpty()) {
+            return;
+        }
         try {
             mysqlServer.open();
             mysqlLocal.open();
@@ -592,6 +626,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     }
                 }
 
+                AppLogUtil.info(getClass(), "uploadSaleToSTCardSection เสร็จสิ้น: " + totalItems + " รายการ");
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     pbCheckUpdate.setValue(totalItems);
                     pbCheckUpdate.setString("ส่งข้อมูล เสร็จสิ้น (" + totalItems + " รายการ)");
@@ -602,7 +637,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                 }
             }
         } catch (SQLException e) {
-            AppLogUtil.log(this.getClass(), "error", e);
+            AppLogUtil.error(getClass(), "uploadSaleToSTCardSection SQL error: " + e.getMessage(), e);
         } finally {
             mysqlServer.close();
             mysqlLocal.close();
@@ -621,6 +656,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     }
 
     private void uploadUpdateVoid() {
+        AppLogUtil.info(getClass(), "uploadUpdateVoid: เริ่มตรวจสอบรายการ Void");
         try {
             mysqlLocal.open();
             mysqlServer.open();
@@ -651,6 +687,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     listBean.add(bean);
                 }
                 final int totalVoid = listBean.size();
+                AppLogUtil.info(getClass(), "uploadUpdateVoid: พบรายการ Void " + totalVoid + " รายการ");
                 javax.swing.SwingUtilities.invokeLater(() -> {
                     pbCheckUpdate.setStringPainted(true);
                     pbCheckUpdate.setMinimum(0);
@@ -666,6 +703,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     for (int i = 0; i < listBean.size(); i++) {
                         STCardBean b = listBean.get(i);
                         final int currentVoid = i + 1;
+                        AppLogUtil.info(getClass(), "Void update [" + currentVoid + "/" + totalVoid + "] pcode=" + b.getS_PCode() + " refno=" + b.getRefNo());
                         final String voidMsg = "Processing Void='V' " + b.getS_PCode() + " (" + currentVoid + "/" + totalVoid + ")";
                         javax.swing.SwingUtilities.invokeLater(() -> {
                             txtSql.setText(voidMsg);
@@ -685,6 +723,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                         psRefund.executeUpdate();
                         uploadStkfile(b.getS_PCode());
                     }
+                    AppLogUtil.info(getClass(), "uploadUpdateVoid เสร็จสิ้น: " + totalVoid + " รายการ");
                     javax.swing.SwingUtilities.invokeLater(() -> {
                         pbCheckUpdate.setValue(totalVoid);
                         pbCheckUpdate.setString("อัพเดต Void เสร็จสิ้น (" + totalVoid + " รายการ)");
@@ -693,7 +732,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             }
 
         } catch (SQLException e) {
-            AppLogUtil.log(this.getClass(), "error", e);
+            AppLogUtil.error(getClass(), "uploadUpdateVoid SQL error: " + e.getMessage(), e);
         } finally {
             mysqlLocal.close();
             mysqlServer.close();

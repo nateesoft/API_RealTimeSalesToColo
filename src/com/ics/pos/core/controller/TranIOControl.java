@@ -12,8 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 /**
  *
@@ -61,7 +60,7 @@ public class TranIOControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(TranIOControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }
@@ -88,7 +87,7 @@ public class TranIOControl {
             }
             System.out.println("ดาวน์โหลดเอกสารสินค้าออกเรียบร้อย กรุณายืนยันเอกสารในระบบคลังสินค้า");
         } catch (SQLException e) {
-            Logger.getLogger(TranIOControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
             mysqlServer.close();

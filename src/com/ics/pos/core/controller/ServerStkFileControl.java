@@ -5,8 +5,7 @@ import database.MySQLConnectWebOnline;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 import util.DateConvert;
 
 public class ServerStkFileControl {
@@ -64,7 +63,7 @@ public class ServerStkFileControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }
@@ -134,8 +133,8 @@ public class ServerStkFileControl {
                 }
             }
 
-        } catch (SQLException ex) {
-            Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException e) {
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }
@@ -196,8 +195,8 @@ public class ServerStkFileControl {
             pstmt.setString(33, stkFileBean.getBranch());
             pstmt.executeUpdate();
             System.out.println("Processing UIpdate stkfileServer bpcode : " + stkFileBean.getbPcode());
-        } catch (SQLException ex) {
-            Logger.getLogger(ServerStkFileControl.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (SQLException e) {
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }

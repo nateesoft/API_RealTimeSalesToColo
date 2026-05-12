@@ -3,8 +3,7 @@ package com.ics.pos.core.controller;
 import database.MySQLConnectWebOnline;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 public class ServerPosHwSetupControl {
     private final MySQLConnectWebOnline mysqlServer = new MySQLConnectWebOnline();
@@ -25,7 +24,7 @@ public class ServerPosHwSetupControl {
             pstmt.setString(5, terminal);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            Logger.getLogger(ServerPosHwSetupControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }

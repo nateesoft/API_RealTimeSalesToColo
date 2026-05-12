@@ -10,8 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 import util.DateConvert;
 
 /**
@@ -83,7 +82,7 @@ public class LocalSTranControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -135,7 +134,7 @@ public class LocalSTranControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -196,7 +195,7 @@ public class LocalSTranControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -251,7 +250,7 @@ public class LocalSTranControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -324,7 +323,7 @@ public class LocalSTranControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -351,7 +350,7 @@ public class LocalSTranControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTranControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }

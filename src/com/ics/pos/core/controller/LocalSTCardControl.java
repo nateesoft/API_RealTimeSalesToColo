@@ -7,8 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 public class LocalSTCardControl {
 
@@ -48,7 +47,7 @@ public class LocalSTCardControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -90,7 +89,7 @@ public class LocalSTCardControl {
             pstmt.setString(16, stCardNotSend.getS_Rem());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -125,7 +124,7 @@ public class LocalSTCardControl {
             pstmt.setInt(13, stCardNotSend.getS_Que());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }

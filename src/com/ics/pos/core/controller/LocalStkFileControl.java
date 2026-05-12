@@ -7,8 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 /**
  *
@@ -63,7 +62,7 @@ public class LocalStkFileControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalStkFileControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -116,7 +115,7 @@ public class LocalStkFileControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalStkFileControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -167,7 +166,7 @@ public class LocalStkFileControl {
                 stkFileBean.setBranch(branchCode);
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalStkFileControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -187,7 +186,7 @@ public class LocalStkFileControl {
             pstmt.setString(3, bPcode);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            Logger.getLogger(LocalStkFileControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }

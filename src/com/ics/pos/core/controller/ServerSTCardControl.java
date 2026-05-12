@@ -8,8 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 public class ServerSTCardControl {
 
@@ -104,8 +103,7 @@ public class ServerSTCardControl {
                         }
                     } catch (BatchUpdateException bue) {
                         conn.rollback();
-                        // all rows in this chunk are rolled back → leave results[chunkStart..i] as false
-                        Logger.getLogger(ServerSTCardControl.class.getName()).log(Level.SEVERE, null, bue);
+                        AppLogUtil.error(getClass(), bue.getMessage(), bue);
                     }
                     pstmt.clearBatch();
                     chunkStart = i + 1;
@@ -113,7 +111,7 @@ public class ServerSTCardControl {
             }
 
         } catch (SQLException e) {
-            Logger.getLogger(ServerSTCardControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlServer.close();
         }
