@@ -135,7 +135,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
                     url, MySQLConnect.UserName, MySQLConnect.Password)) {
                 return conn != null;
             }
-        } catch (Exception e) {
+        } catch (ClassNotFoundException | SQLException e) {
             AppLogUtil.error(getClass(), "Local MySQL connect ล้มเหลว: " + e.getMessage(), e);
             return false;
         }
