@@ -9,24 +9,21 @@ import java.sql.SQLException;
 import util.AppLogUtil;
 
 public class BranchControl {
+
     private final MySQLConnect mysqlLocal = new MySQLConnect();
-    private final String BRANCH_FIX = "999";
-    private final String BRANCH_FIX_DEFAULT = "sss";
 
-    public BranchBean getData() {
-
+    public BranchBean getData(String branchFix, String branchFixDefault) {
         BranchBean branchBean = null;
         try {
             mysqlLocal.open();
-            String sql = "select * from branch limit 1";
-            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-                 ResultSet rs = psmtQuery.executeQuery()) {
+            String sql = "select * from branch";
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql); ResultSet rs = psmtQuery.executeQuery()) {
                 if (rs.next()) {
                     branchBean = new BranchBean();
                     String bCheck;
                     bCheck = rs.getString("Code");
-                    if (bCheck.equals(BRANCH_FIX)) {
-                        branchBean.setCode(BRANCH_FIX_DEFAULT);
+                    if (bCheck.equals(branchFix)) {
+                        branchBean.setCode(branchFixDefault);
                     } else {
                         branchBean.setCode(rs.getString("Code"));
                     }

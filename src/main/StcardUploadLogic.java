@@ -3,20 +3,20 @@ package main;
 import com.ics.bean.STCardBean;
 
 /**
- * Business logic for computing STCard upload parameters.
- * Extracted from Api_RealTimeSalesToColoServer.uploadStcard() for testability.
+ * Business logic for computing STCard upload parameters. Extracted from
+ * Api_RealTimeSalesToColoServer.uploadStcard() for testability.
  */
 class StcardUploadLogic {
 
-    static final String S_REM_SAL = "SAL";
-
     @FunctionalInterface
     interface MatchDiscountStrategy {
+
         STCardBean match(String s_No, String s_Date, String s_PCode,
                 String checkFirstDigit, STCardBean bean);
     }
 
     static class ComputedParams {
+
         final double discount;
         final double nettotal;
         final String refund;
@@ -45,8 +45,9 @@ class StcardUploadLogic {
     /**
      * Computes upload parameters for a single STCardBean.
      *
-     * @param bean             the STCard record to process
-     * @param matchDiscountFn  strategy to resolve discount/nettotal for SAL R/0 types
+     * @param bean the STCard record to process
+     * @param matchDiscountFn strategy to resolve discount/nettotal for SAL R/0
+     * types
      * @return computed parameters including a shouldSkip flag
      */
     static ComputedParams computeParams(STCardBean bean, MatchDiscountStrategy matchDiscountFn) {
@@ -59,7 +60,7 @@ class StcardUploadLogic {
 
         String checkFirstDigitSNo = bean.getS_No().substring(0, 1);
         System.out.println("MatchDiscountStrategy");
-        if (bean.getS_Rem().equals(S_REM_SAL)) {
+        if (bean.getS_Rem().equals(Api_RealTimeSalesToColoServer.STCARD_SALE_TYPE)) {
             if (checkFirstDigitSNo.equals("E")) {
                 nettotal = bean.getS_OutCost();
                 refund = "-";
@@ -70,10 +71,10 @@ class StcardUploadLogic {
             if (checkFirstDigitSNo.equals("R") || checkFirstDigitSNo.equals("0")) {
                 STCardBean matched = matchDiscountFn.match(
                         bean.getS_No(), bean.getS_Date(), bean.getS_PCode(), checkFirstDigitSNo, bean);
-                if(matched == null){
+                if (matched == null) {
                     matched = bean;
                 }
-                
+
                 discount = matched.getDiscount();
                 nettotal = matched.getNettotal();
                 refund = matched.getRefund();
@@ -88,17 +89,17 @@ class StcardUploadLogic {
                 nettotal = bean.getS_OutCost();
             }
             refund = bean.getRefund();
-            if(refund == null||refund.equals("")){
-                refund="-";
+            if (refund == null || refund.equals("")) {
+                refund = "-";
             }
             cashier = bean.getCashier();
             emp = cashier;
         }
 
-        boolean isSalType = bean.getS_Rem().equals(S_REM_SAL)
+        boolean isSalType = bean.getS_Rem().equals(Api_RealTimeSalesToColoServer.STCARD_SALE_TYPE)
                 && (checkFirstDigitSNo.equals("E") || refno.equals(""));
 
-        if (nettotal == 0 && bean.getS_Rem().equals(S_REM_SAL) && bean.getS_Out() != 0) {
+        if (nettotal == 0 && bean.getS_Rem().equals(Api_RealTimeSalesToColoServer.STCARD_SALE_TYPE) && bean.getS_Out() != 0) {
             bean.setNettotal(totalCompareNettotal(bean));
             nettotal = bean.getNettotal();
         }
@@ -118,10 +119,11 @@ class StcardUploadLogic {
     }
 
     /**
-     * Fallback nettotal for SAL-type beans with zero nettotal and non-zero OutCost.
+     * Fallback nettotal for SAL-type beans with zero nettotal and non-zero
+     * OutCost.
      */
     static double totalCompareNettotal(STCardBean bean) {
-        if (bean.getS_OutCost() != 0 && bean.getS_Rem().equals(S_REM_SAL) && bean.getNettotal() == 0) {
+        if (bean.getS_OutCost() != 0 && bean.getS_Rem().equals(Api_RealTimeSalesToColoServer.STCARD_SALE_TYPE) && bean.getNettotal() == 0) {
             bean.setNettotal(bean.getS_OutCost());
         }
         return bean.getNettotal();

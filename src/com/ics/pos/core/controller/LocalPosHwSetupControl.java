@@ -16,9 +16,7 @@ public class LocalPosHwSetupControl {
     public String getReceNo1ByTerminal(String terminal) {
         try {
             mysqlLocal.open();
-            String sql = "select ReceNo1 from poshwsetup "
-                    + "where terminal=? "
-                    + "limit 1";
+            String sql = "select ReceNo1 from poshwsetup where terminal=?";
             try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql)) {
                 psmtQuery.setString(1, terminal);
                 try (ResultSet rs = psmtQuery.executeQuery()) {

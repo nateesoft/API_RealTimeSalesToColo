@@ -75,7 +75,7 @@ public class LocalStkFileControl {
 
         try {
             mysqlLocal.open();
-            String sql = "select * from stkfile where bpcode=? limit 1";
+            String sql = "select * from stkfile where bpcode=?";
             try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql)) {
                 psmtQuery.setString(1, bpCode);
                 try (ResultSet rs = psmtQuery.executeQuery()) {
@@ -179,9 +179,8 @@ public class LocalStkFileControl {
     public void updateTimeData(String bPcode, String currentData, String currentTime) {
         try {
             mysqlLocal.open();
-            String sql = "update stkfile set "
-                    + "Lastupdate=?, "
-                    + "LastTimeUpdate=? where bpcode=?";
+            
+            String sql = "update stkfile SET Lastupdate=?, LastTimeUpdate=? WHERE bpcode=?";
             try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
                 pstmt.setString(1, currentData);
                 pstmt.setString(2, currentTime);

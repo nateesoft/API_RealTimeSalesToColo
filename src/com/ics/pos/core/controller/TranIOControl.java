@@ -176,10 +176,21 @@ public class TranIOControl {
     }
 
     private void batchUpdateSyncStatus(List<STCardBean> beans, String remType) throws SQLException {
-        String sql = "UPDATE stcard SET data_Sync='Y' "
-                + "WHERE s_bran=? AND s_date=? AND s_no=? AND s_que=? AND s_pcode=? AND s_rem=? "
-                + "AND s_entrydate=? AND s_entrytime=? AND s_user=? AND s_in=? AND s_out=? "
-                + "AND s_outcost=? AND data_Sync='N'";
+        String sql = "UPDATE stcard "
+                + "SET data_Sync='Y' "
+                + "WHERE s_bran=? "
+                + "AND s_date=? "
+                + "AND s_no=? "
+                + "AND s_que=? "
+                + "AND s_pcode=? "
+                + "AND s_rem=? "
+                + "AND s_entrydate=? "
+                + "AND s_entrytime=? "
+                + "AND s_user=? "
+                + "AND s_in=? "
+                + "AND s_out=? "
+                + "AND s_outcost=? "
+                + "AND data_Sync='N'";
         try (PreparedStatement ps = mysqlServer.getConnection().prepareStatement(sql)) {
             for (STCardBean bean : beans) {
                 ps.setString(1, Branch);

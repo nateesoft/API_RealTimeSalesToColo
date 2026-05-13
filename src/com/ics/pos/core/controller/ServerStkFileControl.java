@@ -17,9 +17,7 @@ public class ServerStkFileControl {
 
         try {
             mysqlServer.open();
-            String sql = "select * from stkfile "
-                    + "where bpcode=? and Branch=? "
-                    + "limit 1";
+            String sql = "select * from stkfile where bpcode=? and Branch=?";
             try (PreparedStatement psmtQuery = mysqlServer.getConnection().prepareStatement(sql)) {
                 psmtQuery.setString(1, bpCode);
                 psmtQuery.setString(2, branchCode);
@@ -124,9 +122,9 @@ public class ServerStkFileControl {
                     pstmt.setString(32, dc.GetCurrentTime());
                     pstmt.setString(33, "N");
                     if (pstmt.executeUpdate() > 0) {
-                        System.err.println("Save New Stkfle : bpcode = " + bean.getbPcode() + " And Branch = " + bean.getBranch());
+                        AppLogUtil.info(getClass(), "Save New Stkfle : bpcode = " + bean.getbPcode() + " And Branch = " + bean.getBranch());
                     } else {
-                        System.err.println("Cannot Add new Stkfile Server Because : bean is null");
+                        AppLogUtil.info(getClass(), "Cannot Add new Stkfile Server Because : bean is null");
                     }
                 }
             }
@@ -141,11 +139,6 @@ public class ServerStkFileControl {
 
     public void updateData(STKFileBean stkFileBean, String lastUpdate, String lastTimeUpdate) {
         try {
-            if (stkFileBean.getbPcode().equals("KL500-02-39")) {
-                System.out.println("StkfileServer Bean " + stkFileBean);
-                System.out.println("TEST DEBUG IS NULL ...............................");
-                System.out.println("TEST DEBUG IS NULL ...............................");
-            }
             mysqlServer.open();
             String sql = "update stkfile set "
                     + "bqty=?, bamt=?, btotalamt=?, "
@@ -191,7 +184,8 @@ public class ServerStkFileControl {
                 pstmt.setString(32, stkFileBean.getbPcode());
                 pstmt.setString(33, stkFileBean.getBranch());
                 pstmt.executeUpdate();
-                System.out.println("Processing UIpdate stkfileServer bpcode : " + stkFileBean.getbPcode());
+                
+                AppLogUtil.info(getClass(), "Processing UIpdate stkfileServer bpcode : " + stkFileBean.getbPcode());
             }
         } catch (SQLException e) {
             AppLogUtil.error(getClass(), e.getMessage(), e);

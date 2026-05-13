@@ -21,35 +21,33 @@ public class DocumentsDownload extends javax.swing.JFrame {
     /**
      * Creates new form NewJFrame
      */
-    BranchBean branchBean = new BranchControl().getData();
     BranchControl branControl = new BranchControl();
-    private MySQLConnectWebOnline mysqlWebOnline = new MySQLConnectWebOnline();
-    private MySQLConnect mysql = new MySQLConnect();
+    private final MySQLConnectWebOnline mysqlWebOnline = new MySQLConnectWebOnline();
+    private final MySQLConnect mysqlLocal = new MySQLConnect();
 
     public void DocumentsDownload() {
         initComponents();
-        mysql.open();
         mysqlWebOnline.open();
         try {
-            receiveDocuments(mysql.getConnection(), mysqlWebOnline.getConnection());
+            BranchBean branchBean = branControl.getData(Api_RealTimeSalesToColoServer.BRANCH_FIX, Api_RealTimeSalesToColoServer.BRANCH_FIX_DEFAULT);
+            receiveDocuments(mysqlWebOnline.getConnection(), branchBean.getCode(), Api_RealTimeSalesToColoServer.WEB_SOURCE_DATA);
         } catch (Exception e) {
             AppLogUtil.log(this.getClass(), "error", e);
         }
-        mysql.close();
         mysqlWebOnline.close();
 
     }
 
-    private void receiveDocuments(Connection mysqlLocal, Connection mysqlWeb) {
+    private void receiveDocuments(Connection mysqlWeb, String branchCode, String sourceData) {
         try {
+            mysqlLocal.open();
             List<STCardBean> listSTCardNotSend = new ArrayList();
             String sql = "select * from stcard "
-                    + "where s_bran='" + branchBean.getCode() + "' "
+                    + "where s_bran='" + branchCode + "' "
                     + "and data_sync='N' and "
-                    + "Source_data='WEB' "
+                    + "Source_data='"+sourceData+"' "
                     + "order by s_date,s_no,s_que ";
-            try (java.sql.Statement stmt = mysqlWeb.createStatement();
-                 ResultSet rs = stmt.executeQuery(sql)) {
+            try (java.sql.Statement stmt = mysqlWeb.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
                 while (rs.next()) {
                     STCardBean bean = new STCardBean();
                     bean.setS_No(rs.getString("S_NO"));
@@ -76,7 +74,7 @@ public class DocumentsDownload extends javax.swing.JFrame {
                     if (listSTCardNotSend.get(i).getS_Rem().equals("TRI_HQ")) {
 
                         // Check Doc Local ก่อนนะว่ามีไหม
-                        checkDoc = checkDocLocal(listSTCardNotSend.get(i).getS_No(), mysql.getConnection(), "TRI_HQ");
+                        checkDoc = checkDocLocal(listSTCardNotSend.get(i).getS_No(), mysqlLocal.getConnection(), "TRI_HQ");
                         sqlInsLoccal = "INSERT INTO tranin "
                                 + "(R_No, R_Que, R_PCode, R_Stock, R_Pack, "
                                 + "R_Qty, R_Post, R_Unit, R_Cost, R_Amount, "
@@ -89,7 +87,7 @@ public class DocumentsDownload extends javax.swing.JFrame {
                                 + "NULL, 0, 0, NULL, NULL)";
                         System.out.println(sqlInsLoccal);
                     } else {
-                        checkDoc = checkDocLocal(listSTCardNotSend.get(i).getS_No(), mysql.getConnection(), "TRI_HQ");
+                        checkDoc = checkDocLocal(listSTCardNotSend.get(i).getS_No(), mysqlLocal.getConnection(), "TRI_HQ");
                         sqlInsLoccal = "INSERT INTO tranout "
                                 + "(R_No, R_Que, R_PCode, R_Stock, R_Pack, "
                                 + "R_Qty, R_Post, R_Unit, R_Cost, R_Amount, "
@@ -107,6 +105,8 @@ public class DocumentsDownload extends javax.swing.JFrame {
             }
         } catch (SQLException e) {
             AppLogUtil.log(this.getClass(), "error", e);
+        } finally {
+            mysqlLocal.open();
         }
     }
 
