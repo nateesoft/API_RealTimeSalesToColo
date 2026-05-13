@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="API_RealTimeSalesToColo">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/dist/API_RealTimeSalesToColo.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

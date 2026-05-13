@@ -35,6 +35,26 @@ public class STCardBean {
     
     private String dataSync = "";
     private String source_Data = "";
+    private double unitPrice = 0.00;
+    private String r_index = "";
+    
+    private String tableUpdate = "";
+
+    public String getR_index() {
+        return r_index;
+    }
+
+    public void setR_index(String r_index) {
+        this.r_index = r_index;
+    }
+
+    public double getUnitPrice() {
+        return unitPrice;
+    }
+
+    public void setUnitPrice(double unitPrice) {
+        this.unitPrice = unitPrice;
+    }
 
     public String getS_Date() {
         return s_Date;
@@ -242,6 +262,14 @@ public class STCardBean {
 
     public void setSource_Data(String source_Data) {
         this.source_Data = source_Data;
+    }
+
+    public String getTableUpdate() {
+        return tableUpdate;
+    }
+
+    public void setTableUpdate(String tableUpdate) {
+        this.tableUpdate = tableUpdate;
     }
 
 }

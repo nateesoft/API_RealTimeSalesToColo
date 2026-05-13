@@ -7,22 +7,22 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import util.AppLogUtil;
 
 public class LocalSTCardControl {
+
     private final MySQLConnect mysqlLocal = new MySQLConnect();
 
-    public List<STCardBean> getListSTCardNotSend() {
+    public List<STCardBean> getListSTCardNotSendNotSALtype(String saleType) {
         List<STCardBean> list = new ArrayList<>();
         try {
             mysqlLocal.open();
+
             String sql = "select * from stcard "
                     + "where s_send <> 'Y' "
-                    + "and Source_Data <> 'WEB' "
-                    + "order by s_date, s_no, s_pcode, s_entrytime";
-            PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql);
-            try (ResultSet rs = psmtQuery.executeQuery()) {
+                    + "and s_rem<>'" + saleType + "' "
+                    + "order by s_date, s_no, s_pcode,s_que, s_entrytime";
+            try (PreparedStatement psmtQuery = mysqlLocal.getConnection().prepareStatement(sql); ResultSet rs = psmtQuery.executeQuery()) {
                 while (rs.next()) {
                     STCardBean bean = new STCardBean();
                     bean.setS_Date(rs.getString("s_date"));
@@ -46,7 +46,7 @@ public class LocalSTCardControl {
                 }
             }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
@@ -61,57 +61,27 @@ public class LocalSTCardControl {
                     + "set s_send='Y', "
                     + "LastUpdate=?, "
                     + "LastTimeUpdate=? "
-                    + "where s_pcode=? "
-                    + "and s_date=? and s_entrytime=? "
+                    + "where s_no=? and s_pcode=? "
                     + "and s_rem=? and s_user=? "
-                    + "and s_send='N' and s_no=?";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, lastUpdate);
-            pstmt.setString(2, lastTimeUpdate);
-            pstmt.setString(3, stCardNotSend.getS_PCode());
-            pstmt.setString(4, stCardNotSend.getS_Date());
-            pstmt.setString(5, stCardNotSend.getS_EntryTime());
-            pstmt.setString(6, stCardNotSend.getS_Rem());
-            pstmt.setString(7, stCardNotSend.getS_User());
-            pstmt.setString(8, stCardNotSend.getS_No());
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) {
-            Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
-        } finally {
-            mysqlLocal.close();
-        }
+                    + "and s_send='N' "
+                    + "and s_in=? and s_out=? "
+                    + "and s_incost=? and s_outcost=?";
+            try (PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, lastUpdate);
+                pstmt.setString(2, lastTimeUpdate);
+                pstmt.setString(3, stCardNotSend.getS_No());
+                pstmt.setString(4, stCardNotSend.getS_PCode());
+                pstmt.setString(5, stCardNotSend.getS_Rem());
+                pstmt.setString(6, stCardNotSend.getS_User());
+                pstmt.setDouble(7, stCardNotSend.getS_In());
+                pstmt.setDouble(8, stCardNotSend.getS_Out());
+                pstmt.setDouble(9, stCardNotSend.getS_InCost());
+                pstmt.setDouble(10, stCardNotSend.getS_OutCost());
 
-        return false;
-    }
-
-    public boolean updateSendStatusDone(STCardBean stCardNotSend, String lastUpdate, String lastTimeUpdate) {
-        try {
-            mysqlLocal.open();
-            String sql = "update stcard "
-                    + "set s_send='Y', "
-                    + "LastUpdate=?, "
-                    + "LastTimeUpdate=? "
-                    + "where s_pcode=? and s_date=? and s_entrytime=? "
-                    + "and s_rem=? and s_user=? and s_send='N' and s_no=? "
-                    + "and s_incost=? and s_in=? and s_out=? "
-                    + "and s_outcost=? and s_que=?";
-            PreparedStatement pstmt = mysqlLocal.getConnection().prepareStatement(sql);
-            pstmt.setString(1, lastUpdate);
-            pstmt.setString(2, lastTimeUpdate);
-            pstmt.setString(3, stCardNotSend.getS_PCode());
-            pstmt.setString(4, stCardNotSend.getS_Date());
-            pstmt.setString(5, stCardNotSend.getS_EntryTime());
-            pstmt.setString(6, stCardNotSend.getS_Rem());
-            pstmt.setString(7, stCardNotSend.getS_User());
-            pstmt.setString(8, stCardNotSend.getS_No());
-            pstmt.setDouble(9, stCardNotSend.getS_InCost());
-            pstmt.setDouble(10, stCardNotSend.getS_In());
-            pstmt.setDouble(11, stCardNotSend.getS_Out());
-            pstmt.setDouble(12, stCardNotSend.getS_OutCost());
-            pstmt.setInt(13, stCardNotSend.getS_Que());
-            return pstmt.executeUpdate() > 0;
+                return pstmt.executeUpdate() > 0;
+            }
         } catch (SQLException e) {
-            Logger.getLogger(LocalSTCardControl.class.getName()).log(Level.SEVERE, null, e);
+            AppLogUtil.error(getClass(), e.getMessage(), e);
         } finally {
             mysqlLocal.close();
         }
