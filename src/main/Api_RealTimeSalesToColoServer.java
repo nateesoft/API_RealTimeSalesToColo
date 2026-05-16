@@ -491,7 +491,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
 
         AppLogUtil.info(getClass(), "uploadStkfile: pcode=" + bpcode);
-//        SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE pcode=" + bpcode));
+        SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE pcode=" + bpcode));
 
         STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
         if (stkFileBean == null) {
@@ -588,6 +588,16 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             try (PreparedStatement psInsert = serverConn.prepareStatement(sqlInsert); PreparedStatement psUpdateSTran = localConn.prepareStatement(sqlUpdateSTran); PreparedStatement psUpdateTSale = localConn.prepareStatement(sqlUpdateTSale)) {
                 for (int i = 0; i < listBean.size(); i++) {
                     STCardBean stcardBean = listBean.get(i);
+                    
+                    final int current = i + 1;
+                    final String sqlMsg = "กำลังส่งข้อมูล " + stcardBean.getTableUpdate() + " "
+                            + "รหัส " + stcardBean.getS_PCode() + " "
+                            + "ลำดับที่ " + current + "/" + totalItems;
+                    SwingUtilities.invokeLater(() -> {
+                        txtSql.setText(sqlMsg);
+                        pbCheckUpdate.setValue(current);
+                        pbCheckUpdate.setString(current + " / " + totalItems);
+                    });
 
                     psInsert.setString(1, stcardBean.getS_Date());
                     psInsert.setString(2, stcardBean.getS_No());
