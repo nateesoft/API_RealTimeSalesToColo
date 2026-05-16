@@ -26,8 +26,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import util.AppLogUtil;
@@ -487,8 +485,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private final ServerStkFileControl serverStkFileControl = new ServerStkFileControl();
 
     private void uploadStkfile(String bpcode) {
-        branchBean = new BranchControl().getData(BRANCH_FIX, BRANCH_FIX_DEFAULT);
-
         if (bpcode == null || bpcode.isEmpty()) {
             AppLogUtil.warning(getClass(), "ไม่พบข้อมูล pcode=" + bpcode);
             return;
@@ -658,13 +654,6 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             mysqlServer.close();
             mysqlLocal.close();
         }
-    }
-
-    private void applyLocalSendStatus(PreparedStatement ps, STCardBean bean) throws SQLException {
-        ps.setString(1, bean.getRefNo());
-        ps.setString(2, bean.getR_index());
-        ps.setString(3, bean.getS_PCode());
-        ps.executeUpdate();
     }
 
     private void addLocalSendStatusBatch(PreparedStatement ps, STCardBean bean) throws SQLException {
