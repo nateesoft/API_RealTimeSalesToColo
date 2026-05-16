@@ -15,6 +15,7 @@ import com.ics.pos.core.controller.LocalTSaleControl;
 import com.ics.pos.core.controller.TranIOControl;
 import database.MySQLConnect;
 import database.MySQLConnectWebOnline;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -494,7 +495,7 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         }
 
         AppLogUtil.info(getClass(), "uploadStkfile: pcode=" + bpcode);
-        SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE pcode=" + bpcode));
+//        SwingUtilities.invokeLater(() -> txtSql.setText("STKFILE pcode=" + bpcode));
 
         STKFileBean stkFileBean = localStkFile.getDataByBPCode(bpcode);
         if (stkFileBean == null) {
@@ -563,89 +564,93 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
             mysqlServer.open();
             mysqlLocal.open();
 
-            if (!listBean.isEmpty()) {
-                String sqlInsert = "INSERT INTO stcard ("
-                        + "s_date, s_no, s_subNo, s_Que, s_pcode,"
-                        + " s_stk, s_in, s_out, s_incost, s_outcost,"
-                        + " s_acost, s_rem, s_user, s_entrydate, s_entrytime,"
-                        + " s_link, s_bran, data_Sync, Source_data, Discount,"
-                        + " Nettotal, Refund, Refno, Cashier, EMP,"
-                        + " UnitPrice, R_index)"
-                        + " VALUES(?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)";
-                String sqlUpdateSTran = "UPDATE s_tran SET r_send='Y' "
-                        + "WHERE r_refno=? AND r_index=? AND r_plucode=?";
-                String sqlUpdateTSale = "UPDATE t_sale SET r_send='Y' "
-                        + "WHERE r_refno=? AND r_index=? AND r_plucode=?";
-                final int totalItems = listBean.size();
-                SwingUtilities.invokeLater(() -> {
-                    pbCheckUpdate.setStringPainted(true);
-                    pbCheckUpdate.setMinimum(0);
-                    pbCheckUpdate.setMaximum(totalItems);
-                    pbCheckUpdate.setValue(0);
-                    pbCheckUpdate.setString("เริ่มส่งข้อมูล ...");
-                });
+            String sqlInsert = "INSERT INTO stcard ("
+                    + "s_date, s_no, s_subNo, s_Que, s_pcode,"
+                    + " s_stk, s_in, s_out, s_incost, s_outcost,"
+                    + " s_acost, s_rem, s_user, s_entrydate, s_entrytime,"
+                    + " s_link, s_bran, data_Sync, Source_data, Discount,"
+                    + " Nettotal, Refund, Refno, Cashier, EMP,"
+                    + " UnitPrice, R_index)"
+                    + " VALUES(?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?,?,?,?, ?,?)";
+            String sqlUpdateSTran = "UPDATE s_tran SET r_send='Y' "
+                    + "WHERE r_refno=? AND r_index=? AND r_plucode=?";
+            String sqlUpdateTSale = "UPDATE t_sale SET r_send='Y' "
+                    + "WHERE r_refno=? AND r_index=? AND r_plucode=?";
+            final int totalItems = listBean.size();
+            SwingUtilities.invokeLater(() -> {
+                pbCheckUpdate.setStringPainted(true);
+                pbCheckUpdate.setMinimum(0);
+                pbCheckUpdate.setMaximum(totalItems);
+                pbCheckUpdate.setValue(0);
+                pbCheckUpdate.setString("เริ่มส่งข้อมูล ...");
+            });
 
-                try (PreparedStatement psInsert = mysqlServer.getConnection().prepareStatement(sqlInsert); PreparedStatement psUpdateSTran = mysqlLocal.getConnection().prepareStatement(sqlUpdateSTran); PreparedStatement psUpdateTSale = mysqlLocal.getConnection().prepareStatement(sqlUpdateTSale)) {
-                    for (int i = 0; i < listBean.size(); i++) {
-                        STCardBean stcardBean = listBean.get(i);
-                        final int current = i + 1;
-                        final String sqlMsg = "กำลังส่งข้อมูล " + stcardBean.getTableUpdate() + " "
-                                + "รหัส " + stcardBean.getS_PCode() + " "
-                                + "ลำดับที่ " + current + "/" + totalItems;
-                        SwingUtilities.invokeLater(() -> {
-                            txtSql.setText(sqlMsg);
-                            pbCheckUpdate.setValue(current);
-                            pbCheckUpdate.setString(current + " / " + totalItems);
-                        });
+            Connection serverConn = mysqlServer.getConnection();
+            Connection localConn = mysqlLocal.getConnection();
+            serverConn.setAutoCommit(false);
+            localConn.setAutoCommit(false);
+            try (PreparedStatement psInsert = serverConn.prepareStatement(sqlInsert); PreparedStatement psUpdateSTran = localConn.prepareStatement(sqlUpdateSTran); PreparedStatement psUpdateTSale = localConn.prepareStatement(sqlUpdateTSale)) {
+                for (int i = 0; i < listBean.size(); i++) {
+                    STCardBean stcardBean = listBean.get(i);
 
-                        // insert stcard server data
-                        psInsert.setString(1, stcardBean.getS_Date());
-                        psInsert.setString(2, stcardBean.getS_No());
-                        psInsert.setString(3, "");
-                        psInsert.setString(4, "0");
-                        psInsert.setString(5, stcardBean.getS_PCode());
-                        psInsert.setString(6, stcardBean.getS_Stk());
-                        psInsert.setString(7, "0");
-                        psInsert.setDouble(8, stcardBean.getS_Out());
-                        psInsert.setString(9, "0");
-                        psInsert.setDouble(10, stcardBean.getS_OutCost());
-                        psInsert.setString(11, "0");
-                        psInsert.setString(12, stcardBean.getS_Rem());
-                        psInsert.setString(13, stcardBean.getS_User());
-                        psInsert.setString(14, stcardBean.getS_EntryDate());
-                        psInsert.setString(15, stcardBean.getS_EntryTime());
-                        psInsert.setString(16, "N");
-                        psInsert.setString(17, branchBean.getCode());
-                        psInsert.setString(18, "N");
-                        psInsert.setString(19, POS_SOURCE_DATA);
-                        psInsert.setDouble(20, stcardBean.getDiscount());
-                        psInsert.setDouble(21, stcardBean.getNettotal());
-                        psInsert.setString(22, stcardBean.getRefund());
-                        psInsert.setString(23, stcardBean.getRefNo());
-                        psInsert.setString(24, stcardBean.getCashier());
-                        psInsert.setString(25, stcardBean.getEmp());
-                        psInsert.setDouble(26, stcardBean.getUnitPrice());
-                        psInsert.setString(27, stcardBean.getR_index());
-                        psInsert.executeUpdate();
+                    psInsert.setString(1, stcardBean.getS_Date());
+                    psInsert.setString(2, stcardBean.getS_No());
+                    psInsert.setString(3, "");
+                    psInsert.setString(4, "0");
+                    psInsert.setString(5, stcardBean.getS_PCode());
+                    psInsert.setString(6, stcardBean.getS_Stk());
+                    psInsert.setString(7, "0");
+                    psInsert.setDouble(8, stcardBean.getS_Out());
+                    psInsert.setString(9, "0");
+                    psInsert.setDouble(10, stcardBean.getS_OutCost());
+                    psInsert.setString(11, "0");
+                    psInsert.setString(12, stcardBean.getS_Rem());
+                    psInsert.setString(13, stcardBean.getS_User());
+                    psInsert.setString(14, stcardBean.getS_EntryDate());
+                    psInsert.setString(15, stcardBean.getS_EntryTime());
+                    psInsert.setString(16, "N");
+                    psInsert.setString(17, branchBean.getCode());
+                    psInsert.setString(18, "N");
+                    psInsert.setString(19, POS_SOURCE_DATA);
+                    psInsert.setDouble(20, stcardBean.getDiscount());
+                    psInsert.setDouble(21, stcardBean.getNettotal());
+                    psInsert.setString(22, stcardBean.getRefund());
+                    psInsert.setString(23, stcardBean.getRefNo());
+                    psInsert.setString(24, stcardBean.getCashier());
+                    psInsert.setString(25, stcardBean.getEmp());
+                    psInsert.setDouble(26, stcardBean.getUnitPrice());
+                    psInsert.setString(27, stcardBean.getR_index());
+                    psInsert.addBatch();
 
-                        // update status t_sale, s_tran local flag (r_send=Y)
-                        if ("s_tran".equals(stcardBean.getTableUpdate())) {
-                            applyLocalSendStatus(psUpdateSTran, stcardBean);
-                        } else {
-                            applyLocalSendStatus(psUpdateTSale, stcardBean);
-                        }
+                    if ("s_tran".equals(stcardBean.getTableUpdate())) {
+                        addLocalSendStatusBatch(psUpdateSTran, stcardBean);
+                    } else {
+                        addLocalSendStatusBatch(psUpdateTSale, stcardBean);
                     }
                 }
+                psInsert.executeBatch();
+                serverConn.commit();
 
-                AppLogUtil.info(getClass(), "uploadSaleToSTCardSection เสร็จสิ้น: " + totalItems + " รายการ");
-                SwingUtilities.invokeLater(() -> {
-                    pbCheckUpdate.setValue(totalItems);
-                    pbCheckUpdate.setString("ส่งข้อมูล เสร็จสิ้น (" + totalItems + " รายการ)");
-                });
+                psUpdateSTran.executeBatch();
+                psUpdateTSale.executeBatch();
+                localConn.commit();
+            } catch (SQLException e) {
+                serverConn.rollback();
+                localConn.rollback();
+                throw e;
+            } finally {
+                serverConn.setAutoCommit(true);
+                localConn.setAutoCommit(true);
+            }
 
-                for (int i = 0; i < listBean.size(); i++) {
-                    uploadStkfile(listBean.get(i).getS_PCode());
-                }
+            AppLogUtil.info(getClass(), "uploadSaleToSTCardSection เสร็จสิ้น: " + totalItems + " รายการ");
+            SwingUtilities.invokeLater(() -> {
+                pbCheckUpdate.setValue(totalItems);
+                pbCheckUpdate.setString("ส่งข้อมูล เสร็จสิ้น (" + totalItems + " รายการ)");
+            });
+
+            for (int i = 0; i < listBean.size(); i++) {
+                uploadStkfile(listBean.get(i).getS_PCode());
             }
         } catch (SQLException e) {
             AppLogUtil.error(getClass(), "uploadSaleToSTCardSection SQL error: " + e.getMessage(), e);
@@ -660,6 +665,13 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
         ps.setString(2, bean.getR_index());
         ps.setString(3, bean.getS_PCode());
         ps.executeUpdate();
+    }
+
+    private void addLocalSendStatusBatch(PreparedStatement ps, STCardBean bean) throws SQLException {
+        ps.setString(1, bean.getRefNo());
+        ps.setString(2, bean.getR_index());
+        ps.setString(3, bean.getS_PCode());
+        ps.addBatch();
     }
 
     private void uploadUpdateVoid(String branchCode) {
@@ -802,11 +814,13 @@ public class Api_RealTimeSalesToColoServer extends javax.swing.JFrame {
     private void updateStcardInSALtype() {
         // รายการที่ยังไม่ปิดสิ้นวัน
         List<STCardBean> list1 = localTSaleControl.getTSaleTransaction(STOCK_CODE, STCARD_SALE_TYPE, POS_SOURCE_DATA, DATA_NOT_SYNC);
-        List<STCardBean> list2 = localStranControl.getSTranTransaction(STOCK_CODE, STCARD_SALE_TYPE, POS_SOURCE_DATA, DATA_NOT_SYNC);
-        List<STCardBean> list3 = localStranControl.getTransaction15DayAgo(branchBean.getCode(), STOCK_CODE, STCARD_SALE_TYPE, POS_SOURCE_DATA, DATA_NOT_SYNC);
+        uploadSaleToSTCardSection(list1);
 
-        List<STCardBean> result = Stream.of(list1, list2, list3).flatMap(List::stream).collect(Collectors.toList());
-        uploadSaleToSTCardSection(result);
+        List<STCardBean> list2 = localStranControl.getSTranTransaction(STOCK_CODE, STCARD_SALE_TYPE, POS_SOURCE_DATA, DATA_NOT_SYNC);
+        uploadSaleToSTCardSection(list2);
+
+        List<STCardBean> list3 = localStranControl.getTransaction15DayAgo(branchBean.getCode(), STOCK_CODE, STCARD_SALE_TYPE, POS_SOURCE_DATA, DATA_NOT_SYNC);
+        uploadSaleToSTCardSection(list3);
     }
 
 }
